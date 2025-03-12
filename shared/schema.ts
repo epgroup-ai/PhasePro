@@ -25,6 +25,8 @@ export const files = pgTable("files", {
   contentType: text("content_type").notNull(),
   size: integer("size").notNull(),
   uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
+  // For memory storage implementation
+  path: text("path"),
 });
 
 export const insertFileSchema = createInsertSchema(files).omit({
@@ -75,8 +77,6 @@ export const enquiries = pgTable("enquiries", {
 
 export const insertEnquirySchema = createInsertSchema(enquiries).omit({
   id: true,
-  processedAt: true,
-  processingTime: true,
 });
 
 export type InsertEnquiry = z.infer<typeof insertEnquirySchema>;

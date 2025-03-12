@@ -195,7 +195,10 @@ export async function extractDocumentData(filePaths: string[]): Promise<Extracti
     const result = JSON.parse(content);
     
     // If in development environment with dummy key or we're processing samples, use appropriate sample data
-    if (process.env.OPENAI_API_KEY === "sk-dummy-key-for-development" || filePaths.some(path => path.includes('sample_enquiry_'))) {
+    if (process.env.OPENAI_API_KEY === "sk-dummy-key-for-development" || 
+        filePaths.some(path => path.includes('sample_enquiry_')) || 
+        !process.env.OPENAI_API_KEY) {
+      console.log("Using sample extraction data for demo");
       if (useLabelsSample) {
         return getSampleLabelExtractionResult();
       } else {
