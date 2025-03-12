@@ -20,11 +20,6 @@ export async function extractDocumentData(filePaths: string[]): Promise<Extracti
     // 2. Extract the text content
     // 3. Send that content to OpenAI for analysis
     
-    console.log("Processing files:", filePaths);
-    
-    // Check if we should use the sample for labels
-    const useLabelsSample = filePaths.some(path => path.includes('sample_enquiry_labels'));
-    
     // Handle both uploaded files and sample files
     const fileContents = await Promise.all(
       filePaths.map(async (filePath) => {
@@ -100,13 +95,9 @@ export async function extractDocumentData(filePaths: string[]): Promise<Extracti
     // Parse and validate the JSON response
     const result = JSON.parse(content);
     
-    // If in development environment with dummy key or we're processing samples, use appropriate sample data
-    if (process.env.OPENAI_API_KEY === "sk-dummy-key-for-development" || filePaths.some(path => path.includes('sample_enquiry_'))) {
-      if (useLabelsSample) {
-        return getSampleLabelExtractionResult();
-      } else {
-        return getSampleExtractionResult();
-      }
+    // If in development environment with dummy key, use sample data
+    if (process.env.OPENAI_API_KEY === "sk-dummy-key-for-development") {
+      return getSampleExtractionResult();
     }
     
     return result;

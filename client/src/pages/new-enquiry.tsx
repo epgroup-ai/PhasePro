@@ -98,6 +98,50 @@ export default function NewEnquiry() {
               {uploadedFiles.length > 0 && (
                 <UploadedFiles files={uploadedFiles} onRemoveFile={handleRemoveFile} />
               )}
+
+              <div className="mt-6 mb-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Or use sample documents for demonstration:</h4>
+                <div className="flex flex-wrap gap-2">
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      const sampleFile = {
+                        id: 999,
+                        filename: "sample_enquiry_packaging_boxes.txt",
+                        contentType: "text/plain",
+                        size: 2048,
+                        path: "./attached_assets/sample_enquiry_packaging_boxes.txt"
+                      };
+                      setUploadedFiles([sampleFile]);
+                      toast({
+                        title: "Sample document loaded",
+                        description: "Sample packaging enquiry loaded successfully.",
+                      });
+                    }}
+                  >
+                    Sample Packaging Enquiry
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      const sampleFile = {
+                        id: 998,
+                        filename: "sample_enquiry_labels.txt",
+                        contentType: "text/plain",
+                        size: 2048,
+                        path: "./attached_assets/sample_enquiry_labels.txt"
+                      };
+                      setUploadedFiles([sampleFile]);
+                      toast({
+                        title: "Sample document loaded",
+                        description: "Sample labels enquiry loaded successfully.",
+                      });
+                    }}
+                  >
+                    Sample Labels Enquiry
+                  </Button>
+                </div>
+              </div>
               
               <div className="mt-4 flex justify-end">
                 <Button 
