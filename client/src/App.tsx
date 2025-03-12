@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import NewEnquiry from "@/pages/new-enquiry";
 import ProcessedEnquiries from "@/pages/processed-enquiries";
+import EnquiryDetail from "@/pages/enquiry-detail";
 import Analytics from "@/pages/analytics";
 import Settings from "@/pages/settings";
 import Header from "@/components/layout/header";
@@ -18,6 +19,7 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/new-enquiry" component={NewEnquiry} />
       <Route path="/processed-enquiries" component={ProcessedEnquiries} />
+      <Route path="/enquiries/:id" component={EnquiryDetail} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />

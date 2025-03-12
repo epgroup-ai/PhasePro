@@ -206,11 +206,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const specs = await storage.getProductSpecificationsByEnquiryId(id);
       const files = await storage.getFilesByEnquiryId(id);
+      const specSheets = await storage.getSpecSheetsByEnquiryId(id);
       
       res.json({
         enquiry,
         specifications: specs,
         files,
+        specSheets,
       });
     } catch (err) {
       handleError(err, res);
