@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { SpecSheet } from "@shared/schema";
+import { SpecSheet, Enquiry, ProductSpecification, SpecSheetContent } from "@shared/schema";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +19,7 @@ interface SpecSheetViewerProps {
 
 export default function SpecSheetViewer({ specSheets }: SpecSheetViewerProps) {
   const [open, setOpen] = useState(false);
-  const [selectedSheet, setSelectedSheet] = useState<SpecSheet | null>(null);
+  const [selectedSheet, setSelectedSheet] = useState<(SpecSheet & { content: SpecSheetContent }) | null>(null);
 
   // Sort spec sheets by generation date (newest first)
   const sortedSheets = [...specSheets].sort((a, b) => {
@@ -32,8 +32,21 @@ export default function SpecSheetViewer({ specSheets }: SpecSheetViewerProps) {
     return `${d.toLocaleDateString()} at ${d.toLocaleTimeString()}`;
   };
 
+  // Helper function to map spec sheets to properly typed objects
+  const mapSpecSheet = (sheet: SpecSheet): SpecSheet & { content: SpecSheetContent } => {
+    return {
+      ...sheet,
+      content: sheet.content as unknown as SpecSheetContent
+    };
+  };
+  
+  // Type guard to check if array items have specific property
+  const hasType = <T, K extends keyof T>(obj: T, prop: K): boolean => {
+    return obj && prop in obj;
+  };
+  
   const handleViewSpecSheet = (sheet: SpecSheet) => {
-    setSelectedSheet(sheet);
+    setSelectedSheet(mapSpecSheet(sheet));
     setOpen(true);
   };
 
@@ -131,7 +144,7 @@ export default function SpecSheetViewer({ specSheets }: SpecSheetViewerProps) {
                   <h2 className="text-lg font-semibold mb-4">Product Specifications</h2>
                   
                   <ScrollArea className="max-h-[400px]">
-                    {selectedSheet.content.specifications.map((spec, index) => (
+                    {selectedSheet.content.specifications.map((spec: ProductSpecification, index: number) => (
                       <div key={index} className="mb-6 border-b pb-6 last:border-b-0">
                         <h3 className="font-medium text-lg">{spec.productType}</h3>
                         <div className="grid md:grid-cols-2 gap-x-4 gap-y-2 mt-2">

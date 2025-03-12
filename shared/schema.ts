@@ -100,6 +100,15 @@ export const insertSpecSheetSchema = createInsertSchema(specSheets).omit({
 export type InsertSpecSheet = z.infer<typeof insertSpecSheetSchema>;
 export type SpecSheet = typeof specSheets.$inferSelect;
 
+// Define the content type for spec sheets
+export const specSheetContentSchema = z.object({
+  enquiry: z.custom<Enquiry>(),
+  specifications: z.array(z.custom<ProductSpecification>()),
+  generatedAt: z.string(),
+});
+
+export type SpecSheetContent = z.infer<typeof specSheetContentSchema>;
+
 // Stats schema for dashboard
 export const dashboardStats = z.object({
   newEnquiries: z.number(),
