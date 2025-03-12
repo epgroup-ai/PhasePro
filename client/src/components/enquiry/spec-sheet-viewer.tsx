@@ -40,9 +40,19 @@ export default function SpecSheetViewer({ specSheets }: SpecSheetViewerProps) {
     };
   };
   
-  // Type guard to check if array items have specific property
-  const hasType = <T, K extends keyof T>(obj: T, prop: K): boolean => {
-    return obj && prop in obj;
+  // We'll use this function to safely check content in the UI
+  const safeGetContentValue = (obj: any, path: string, defaultValue: any = null): any => {
+    const keys = path.split('.');
+    let current = obj;
+    
+    for (const key of keys) {
+      if (current === null || current === undefined || typeof current !== 'object') {
+        return defaultValue;
+      }
+      current = current[key];
+    }
+    
+    return current !== undefined ? current : defaultValue;
   };
   
   const handleViewSpecSheet = (sheet: SpecSheet) => {
@@ -116,24 +126,28 @@ export default function SpecSheetViewer({ specSheets }: SpecSheetViewerProps) {
               <div className="border rounded-md p-6 bg-white" id="spec-sheet-printable">
                 <div className="text-center mb-6">
                   <h1 className="text-2xl font-bold">Product Specification Sheet</h1>
-                  <p className="text-gray-500">Reference: {selectedSheet.content.enquiry.enquiryCode}</p>
+                  <p className="text-gray-500">Reference: {safeGetContentValue(selectedSheet, 'content.enquiry.enquiryCode', 'N/A')}</p>
                 </div>
                 
                 <div className="grid md:grid-cols-2 gap-6 mb-6">
                   <div>
                     <h2 className="text-lg font-semibold mb-2">Customer Information</h2>
                     <div className="space-y-1">
-                      <p><span className="font-medium">Company:</span> {selectedSheet.content.enquiry.customerName}</p>
-                      <p><span className="font-medium">Contact:</span> {selectedSheet.content.enquiry.contactPerson || "N/A"}</p>
-                      <p><span className="font-medium">Email:</span> {selectedSheet.content.enquiry.contactEmail || "N/A"}</p>
+                      <p><span className="font-medium">Company:</span> {safeGetContentValue(selectedSheet, 'content.enquiry.customerName', 'N/A')}</p>
+                      <p><span className="font-medium">Contact:</span> {safeGetContentValue(selectedSheet, 'content.enquiry.contactPerson', 'N/A')}</p>
+                      <p><span className="font-medium">Email:</span> {safeGetContentValue(selectedSheet, 'content.enquiry.contactEmail', 'N/A')}</p>
                     </div>
                   </div>
                   <div>
                     <h2 className="text-lg font-semibold mb-2">Enquiry Details</h2>
                     <div className="space-y-1">
-                      <p><span className="font-medium">Date Received:</span> {formatDate(selectedSheet.content.enquiry.dateReceived)}</p>
-                      <p><span className="font-medium">Deadline:</span> {selectedSheet.content.enquiry.deadline ? formatDate(selectedSheet.content.enquiry.deadline) : "Not specified"}</p>
-                      <p><span className="font-medium">Status:</span> {selectedSheet.content.enquiry.status}</p>
+                      <p><span className="font-medium">Date Received:</span> {formatDate(safeGetContentValue(selectedSheet, 'content.enquiry.dateReceived', new Date()))}</p>
+                      <p><span className="font-medium">Deadline:</span> {
+                        safeGetContentValue(selectedSheet, 'content.enquiry.deadline') 
+                          ? formatDate(safeGetContentValue(selectedSheet, 'content.enquiry.deadline')) 
+                          : "Not specified"
+                      }</p>
+                      <p><span className="font-medium">Status:</span> {safeGetContentValue(selectedSheet, 'content.enquiry.status', 'Unknown')}</p>
                     </div>
                   </div>
                 </div>
@@ -144,25 +158,25 @@ export default function SpecSheetViewer({ specSheets }: SpecSheetViewerProps) {
                   <h2 className="text-lg font-semibold mb-4">Product Specifications</h2>
                   
                   <ScrollArea className="max-h-[400px]">
-                    {selectedSheet.content.specifications.map((spec: ProductSpecification, index: number) => (
+                    {safeGetContentValue(selectedSheet, 'content.specifications', []).map((spec: ProductSpecification, index: number) => (
                       <div key={index} className="mb-6 border-b pb-6 last:border-b-0">
-                        <h3 className="font-medium text-lg">{spec.productType}</h3>
+                        <h3 className="font-medium text-lg">{spec.productType || 'Unknown Product Type'}</h3>
                         <div className="grid md:grid-cols-2 gap-x-4 gap-y-2 mt-2">
                           <div>
                             <span className="text-sm text-gray-500">Dimensions</span>
-                            <p>{spec.dimensions}</p>
+                            <p>{spec.dimensions || 'N/A'}</p>
                           </div>
                           <div>
                             <span className="text-sm text-gray-500">Material</span>
-                            <p>{spec.material}</p>
+                            <p>{spec.material || 'N/A'}</p>
                           </div>
                           <div>
                             <span className="text-sm text-gray-500">Quantity</span>
-                            <p>{spec.quantity}</p>
+                            <p>{spec.quantity || 'N/A'}</p>
                           </div>
                           <div>
                             <span className="text-sm text-gray-500">Print Type</span>
-                            <p>{spec.printType}</p>
+                            <p>{spec.printType || 'N/A'}</p>
                           </div>
                         </div>
                       </div>
@@ -170,22 +184,27 @@ export default function SpecSheetViewer({ specSheets }: SpecSheetViewerProps) {
                   </ScrollArea>
                 </div>
                 
-                {(selectedSheet.content.enquiry.specialInstructions || selectedSheet.content.enquiry.deliveryRequirements) && (
+                {(safeGetContentValue(selectedSheet, 'content.enquiry.specialInstructions') || 
+                  safeGetContentValue(selectedSheet, 'content.enquiry.deliveryRequirements')) && (
                   <>
                     <Separator className="my-6" />
                     
                     <div className="space-y-4">
-                      {selectedSheet.content.enquiry.specialInstructions && (
+                      {safeGetContentValue(selectedSheet, 'content.enquiry.specialInstructions') && (
                         <div>
                           <h2 className="text-lg font-semibold mb-2">Special Instructions</h2>
-                          <p className="whitespace-pre-line">{selectedSheet.content.enquiry.specialInstructions}</p>
+                          <p className="whitespace-pre-line">
+                            {safeGetContentValue(selectedSheet, 'content.enquiry.specialInstructions', 'No special instructions provided')}
+                          </p>
                         </div>
                       )}
                       
-                      {selectedSheet.content.enquiry.deliveryRequirements && (
+                      {safeGetContentValue(selectedSheet, 'content.enquiry.deliveryRequirements') && (
                         <div>
                           <h2 className="text-lg font-semibold mb-2">Delivery Requirements</h2>
-                          <p className="whitespace-pre-line">{selectedSheet.content.enquiry.deliveryRequirements}</p>
+                          <p className="whitespace-pre-line">
+                            {safeGetContentValue(selectedSheet, 'content.enquiry.deliveryRequirements', 'No delivery requirements provided')}
+                          </p>
                         </div>
                       )}
                     </div>
@@ -194,6 +213,7 @@ export default function SpecSheetViewer({ specSheets }: SpecSheetViewerProps) {
                 
                 <div className="text-center text-xs text-gray-500 mt-8">
                   Generated by AI-Integrated Enquiry System • {formatDate(selectedSheet.generatedAt)}
+                  <div>Version {selectedSheet.version}</div>
                 </div>
               </div>
             </div>

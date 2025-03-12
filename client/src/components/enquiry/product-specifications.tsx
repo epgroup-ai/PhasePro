@@ -14,8 +14,8 @@ interface ProductSpecification {
   material: string;
   quantity: string;
   printType: string;
-  aiConfidence?: number;
-  verified?: boolean;
+  aiConfidence: number | null;
+  verified: boolean | null;
 }
 
 interface ProductSpecificationsProps {

@@ -85,7 +85,14 @@ export default function EnquiryDetail() {
     },
   });
   
-  const handleUpdateEnquiry = (data: Partial<Enquiry["enquiry"]>) => {
+  const handleUpdateEnquiry = (data: Partial<{
+    customerName: string;
+    enquiryCode: string;
+    contactPerson: string;
+    contactEmail: string;
+    dateReceived: string;
+    deadline: string;
+  }>) => {
     updateEnquiryMutation.mutate(data as Partial<Enquiry>);
   };
   
@@ -93,7 +100,20 @@ export default function EnquiryDetail() {
     generateSpecSheetMutation.mutate();
   };
   
-  const handleSpecificationUpdate = (updatedSpecs: ProductSpecification[]) => {
+  // Type casting to match the component's expected type
+  type ComponentProductSpecification = {
+    id: number;
+    enquiryId: number;
+    productType: string;
+    dimensions: string;
+    material: string;
+    quantity: string;
+    printType: string;
+    aiConfidence: number | null;
+    verified: boolean | null;
+  };
+  
+  const handleSpecificationUpdate = (updatedSpecs: ComponentProductSpecification[]) => {
     // This would typically update specifications via a separate API call
     console.log("Updating specifications:", updatedSpecs);
   };
@@ -175,7 +195,7 @@ export default function EnquiryDetail() {
             </CardHeader>
             <CardContent>
               <ProductSpecifications 
-                specifications={specifications} 
+                specifications={specifications as ComponentProductSpecification[]} 
                 onChange={handleSpecificationUpdate}
                 enquiryId={enquiry.id}
               />
