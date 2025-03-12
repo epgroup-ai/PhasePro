@@ -10,13 +10,13 @@ export default function Footer() {
           </div>
           <div className="text-sm text-gray-500">
             <Link href="/help">
-              <a className="text-gray-500 hover:text-gray-700 mr-4">Help</a>
+              <button className="text-gray-500 hover:text-gray-700 mr-4">Help</button>
             </Link>
             <Link href="/privacy">
-              <a className="text-gray-500 hover:text-gray-700 mr-4">Privacy</a>
+              <button className="text-gray-500 hover:text-gray-700 mr-4">Privacy</button>
             </Link>
             <Link href="/terms">
-              <a className="text-gray-500 hover:text-gray-700">Terms</a>
+              <button className="text-gray-500 hover:text-gray-700">Terms</button>
             </Link>
           </div>
         </div>
