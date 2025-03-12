@@ -23,8 +23,8 @@ export default function NewEnquiry() {
   const { toast } = useToast();
 
   const processFilesMutation = useMutation({
-    mutationFn: async (fileIds: number[]) => {
-      const response = await apiRequest("POST", "/api/process", { fileIds });
+    mutationFn: async ({ fileIds, sampleDocType }: { fileIds: number[], sampleDocType?: string }) => {
+      const response = await apiRequest("POST", "/api/process", { fileIds, sampleDocType });
       return response.json();
     },
     onSuccess: (data) => {
@@ -65,7 +65,21 @@ export default function NewEnquiry() {
     }
 
     setIsProcessing(true);
-    processFilesMutation.mutate(uploadedFiles.map((file) => file.id));
+    
+    // Check if we're using sample documents
+    if (uploadedFiles.length === 1) {
+      const file = uploadedFiles[0];
+      if (file.filename.includes('sample_enquiry_packaging_boxes')) {
+        processFilesMutation.mutate({ fileIds: [], sampleDocType: 'packaging' });
+        return;
+      } else if (file.filename.includes('sample_enquiry_labels')) {
+        processFilesMutation.mutate({ fileIds: [], sampleDocType: 'labels' });
+        return;
+      }
+    }
+    
+    // Otherwise use regular file processing
+    processFilesMutation.mutate({ fileIds: uploadedFiles.map((file) => file.id) });
   };
 
   return (
@@ -100,10 +114,33 @@ export default function NewEnquiry() {
               )}
 
               <div className="mt-6 mb-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Or use sample documents for demonstration:</h4>
-                <div className="flex flex-wrap gap-2">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Demo with sample documents:</h4>
+                <div className="flex flex-wrap gap-2 mb-3">
                   <Button 
                     variant="outline"
+                    onClick={() => {
+                      setIsProcessing(true);
+                      processFilesMutation.mutate({ fileIds: [], sampleDocType: 'packaging' });
+                    }}
+                  >
+                    Process Packaging Enquiry Demo
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setIsProcessing(true);
+                      processFilesMutation.mutate({ fileIds: [], sampleDocType: 'labels' });
+                    }}
+                  >
+                    Process Labels Enquiry Demo
+                  </Button>
+                </div>
+                <div className="text-xs text-gray-500 italic mb-3">
+                  Click on the buttons above for a one-click demo, or load sample files below:
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button 
+                    variant="ghost" size="sm"
                     onClick={() => {
                       const sampleFile = {
                         id: 999,
@@ -119,10 +156,10 @@ export default function NewEnquiry() {
                       });
                     }}
                   >
-                    Sample Packaging Enquiry
+                    Load Packaging Sample
                   </Button>
                   <Button 
-                    variant="outline"
+                    variant="ghost" size="sm"
                     onClick={() => {
                       const sampleFile = {
                         id: 998,
@@ -138,7 +175,7 @@ export default function NewEnquiry() {
                       });
                     }}
                   >
-                    Sample Labels Enquiry
+                    Load Labels Sample
                   </Button>
                 </div>
               </div>

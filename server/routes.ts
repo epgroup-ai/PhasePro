@@ -98,21 +98,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Process files with AI
   app.post('/api/process', async (req: Request, res: Response) => {
     try {
-      const { fileIds } = z.object({ fileIds: z.array(z.number()) }).parse(req.body);
+      const { fileIds, sampleDocType } = z.object({ 
+        fileIds: z.array(z.number()), 
+        sampleDocType: z.string().optional() 
+      }).parse(req.body);
       
-      if (fileIds.length === 0) {
-        return res.status(400).json({ message: 'No files specified for processing' });
-      }
-
-      const files = await Promise.all(fileIds.map(id => storage.getFile(id)));
-      const validFiles = files.filter(Boolean);
+      let filePaths: string[] = [];
+      let useSampleFiles = false;
       
-      if (validFiles.length === 0) {
-        return res.status(404).json({ message: 'No valid files found for the provided IDs' });
-      }
+      // Check if we're using sample documents
+      if (sampleDocType) {
+        console.log(`Using sample document type: ${sampleDocType}`);
+        useSampleFiles = true;
+        
+        if (sampleDocType === 'packaging') {
+          filePaths = ['./attached_assets/sample_enquiry_packaging_boxes.txt'];
+        } else if (sampleDocType === 'labels') {
+          filePaths = ['./attached_assets/sample_enquiry_labels.txt'];
+        } else {
+          return res.status(400).json({ message: 'Invalid sample document type' });
+        }
+      } else {
+        // Regular file processing
+        if (fileIds.length === 0) {
+          return res.status(400).json({ message: 'No files specified for processing' });
+        }
 
-      // Get file paths from storage
-      const filePaths = validFiles.map(file => file.path);
+        const files = await Promise.all(fileIds.map(id => storage.getFile(id)));
+        const validFiles = files.filter(Boolean);
+        
+        if (validFiles.length === 0) {
+          return res.status(404).json({ message: 'No valid files found for the provided IDs' });
+        }
+
+        // Get file paths from storage
+        filePaths = validFiles.map(file => file.path);
+      }
       
       // Extract data using OpenAI
       const startTime = Date.now();
@@ -140,12 +161,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )
       );
 
-      // Update files to associate with the enquiry
-      await Promise.all(
-        validFiles.map(file =>
-          storage.updateFile(file.id, { enquiryId: enquiry.id })
-        )
-      );
+      // Update files to associate with the enquiry (if not using sample files)
+      if (!useSampleFiles && fileIds.length > 0) {
+        const files = await Promise.all(fileIds.map(id => storage.getFile(id)));
+        const validFiles = files.filter(Boolean);
+        
+        await Promise.all(
+          validFiles.map(file =>
+            storage.updateFile(file.id, { enquiryId: enquiry.id })
+          )
+        );
+      }
 
       res.status(200).json({
         enquiry,
