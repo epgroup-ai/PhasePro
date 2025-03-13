@@ -153,8 +153,21 @@ export default function EnquiryDetail() {
     );
   }
   
-  const { enquiry, specifications, files, specSheets = [] } = data;
+  // Safely destructure data with proper null checks
+  const { enquiry, specifications, files, specSheets = [] } = data || {};
   
+  // Add safety checks for enquiry data
+  if (!enquiry) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <h2 className="text-lg font-medium">Loading enquiry data...</h2>
+          <p className="text-gray-500 mt-2">Please wait while we fetch the enquiry details</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -190,12 +203,12 @@ export default function EnquiryDetail() {
             <CardHeader>
               <CardTitle>Product Specifications</CardTitle>
               <CardDescription>
-                {specifications.length} product(s) in this enquiry
+                {specifications?.length || 0} product(s) in this enquiry
               </CardDescription>
             </CardHeader>
             <CardContent>
               <ProductSpecifications 
-                specifications={specifications as ComponentProductSpecification[]} 
+                specifications={(specifications || []) as ComponentProductSpecification[]} 
                 onChange={handleSpecificationUpdate}
                 enquiryId={enquiry.id}
               />
@@ -267,11 +280,11 @@ export default function EnquiryDetail() {
             <CardHeader>
               <CardTitle>Attached Files</CardTitle>
               <CardDescription>
-                {files.length} file(s) attached to this enquiry
+                {files?.length || 0} file(s) attached to this enquiry
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {files.length > 0 ? (
+              {files && files.length > 0 ? (
                 <ul className="space-y-2">
                   {files.map((file) => (
                     <li key={file.id} className="p-2 border rounded flex items-center justify-between">
