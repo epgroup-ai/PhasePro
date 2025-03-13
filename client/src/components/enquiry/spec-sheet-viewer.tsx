@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { FileText, Printer, Download, EyeIcon, BarChart3, FileIcon, ArrowLeftRight } from "lucide-react";
 
 interface SpecSheetViewerProps {
-  specSheets: SpecSheet[];
+  specSheets: SpecSheet[] | undefined;
 }
 
 export default function SpecSheetViewer({ specSheets }: SpecSheetViewerProps) {
@@ -28,9 +28,9 @@ export default function SpecSheetViewer({ specSheets }: SpecSheetViewerProps) {
   const [activeTab, setActiveTab] = useState<string>("preview");
 
   // Sort spec sheets by generation date (newest first)
-  const sortedSheets = [...specSheets].sort((a, b) => {
+  const sortedSheets = specSheets ? [...specSheets].sort((a, b) => {
     return new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime();
-  });
+  }) : [];
 
   // Format date for display
   const formatDate = (date: Date | string): string => {
@@ -114,7 +114,7 @@ export default function SpecSheetViewer({ specSheets }: SpecSheetViewerProps) {
     return "bg-yellow-100 text-yellow-800";
   };
 
-  if (specSheets.length === 0) {
+  if (!specSheets || specSheets.length === 0) {
     return (
       <div className="text-center py-4">
         <p className="text-gray-500">No spec sheets generated yet</p>
