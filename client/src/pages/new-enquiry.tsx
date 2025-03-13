@@ -7,6 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Zap } from "lucide-react";
+import { EnquiryProcessingAnimation } from "@/components/ui/loading-animation";
 
 export type UploadedFile = {
   id: number;
@@ -86,7 +87,7 @@ export default function NewEnquiry() {
     <div>
       <h1 className="text-2xl font-semibold text-gray-900 mb-4">Process New Enquiry</h1>
       
-      {!processingResult && (
+      {!processingResult && !isProcessing && (
         <div className="mt-8 bg-white shadow overflow-hidden sm:rounded-lg">
           <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
             <div>
@@ -192,6 +193,12 @@ export default function NewEnquiry() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+      
+      {!processingResult && isProcessing && (
+        <div className="mt-8">
+          <EnquiryProcessingAnimation />
         </div>
       )}
       

@@ -20,6 +20,7 @@ import ProductSpecifications from "@/components/enquiry/product-specifications";
 import EnquiryDetails from "@/components/enquiry/enquiry-details";
 import AdditionalRequirements from "@/components/enquiry/additional-requirements";
 import SpecSheetViewer from "@/components/enquiry/spec-sheet-viewer";
+import { LoadingAnimation } from "@/components/ui/loading-animation";
 
 interface EnquiryDetailResponse {
   enquiry: Enquiry;
@@ -98,6 +99,20 @@ export default function EnquiryDetail() {
   
   const handleGenerateSpecSheet = () => {
     generateSpecSheetMutation.mutate();
+    
+    // Display toast with loading animation
+    toast({
+      title: "Generating Specification Sheet",
+      description: (
+        <div className="flex items-center space-x-2">
+          <div className="animate-spin">
+            <FileText className="h-4 w-4" />
+          </div>
+          <span>This may take a few moments...</span>
+        </div>
+      ),
+      duration: 5000,
+    });
   };
   
   // Type casting to match the component's expected type
@@ -127,10 +142,12 @@ export default function EnquiryDetail() {
   
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="h-8 bg-gray-200 rounded animate-pulse w-1/3"></div>
-        <div className="h-40 bg-gray-200 rounded animate-pulse"></div>
-        <div className="h-60 bg-gray-200 rounded animate-pulse"></div>
+      <div className="flex justify-center items-center h-[50vh]">
+        <LoadingAnimation
+          variant="default"
+          size="lg"
+          text="Loading Enquiry Details"
+        />
       </div>
     );
   }
@@ -159,11 +176,12 @@ export default function EnquiryDetail() {
   // Add safety checks for enquiry data
   if (!enquiry) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <h2 className="text-lg font-medium">Loading enquiry data...</h2>
-          <p className="text-gray-500 mt-2">Please wait while we fetch the enquiry details</p>
-        </div>
+      <div className="flex justify-center items-center h-[50vh]">
+        <LoadingAnimation
+          variant="default"
+          size="lg"
+          text="Loading Enquiry Data"
+        />
       </div>
     );
   }
