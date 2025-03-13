@@ -11,6 +11,28 @@ import path from "path";
 import fs from "fs";
 import os from "os";
 
+// Add type definition for multer
+interface File {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  size: number;
+  destination: string;
+  filename: string;
+  path: string;
+  buffer: Buffer;
+}
+
+// Add type augmentation for Express.Request
+declare global {
+  namespace Express {
+    interface Request {
+      files?: File[] | { [fieldname: string]: File[] };
+    }
+  }
+}
+
 // Set up multer for file uploads with temporary storage
 const upload = multer({
   storage: multer.diskStorage({
@@ -69,7 +91,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'No files uploaded' });
       }
 
-      const files = Array.isArray(req.files) ? req.files : [req.files];
+      const files = Array.isArray(req.files) ? req.files : [];
       const uploadedFiles = await Promise.all(
         files.map(async (file) => {
           const uploadedFile = await storage.saveFile({
@@ -132,7 +154,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Get file paths from storage
-        filePaths = validFiles.map(file => file.path);
+        filePaths = validFiles
+          .filter(file => file.path !== null)
+          .map(file => file.path as string);
       }
       
       // Extract data using OpenAI
