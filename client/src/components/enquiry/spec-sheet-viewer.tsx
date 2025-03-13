@@ -11,7 +11,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { FileText, Printer, Download } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { FileText, Printer, Download, EyeIcon, BarChart3, FileIcon, ArrowLeftRight } from "lucide-react";
 
 interface SpecSheetViewerProps {
   specSheets: SpecSheet[];
@@ -20,6 +23,9 @@ interface SpecSheetViewerProps {
 export default function SpecSheetViewer({ specSheets }: SpecSheetViewerProps) {
   const [open, setOpen] = useState(false);
   const [selectedSheet, setSelectedSheet] = useState<(SpecSheet & { content: SpecSheetContent }) | null>(null);
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareSheets, setCompareSheets] = useState<Array<SpecSheet & { content: SpecSheetContent }>>([]);
+  const [activeTab, setActiveTab] = useState<string>("preview");
 
   // Sort spec sheets by generation date (newest first)
   const sortedSheets = [...specSheets].sort((a, b) => {
@@ -57,11 +63,55 @@ export default function SpecSheetViewer({ specSheets }: SpecSheetViewerProps) {
   
   const handleViewSpecSheet = (sheet: SpecSheet) => {
     setSelectedSheet(mapSpecSheet(sheet));
+    setCompareMode(false);
+    setCompareSheets([]);
+    setActiveTab("preview");
     setOpen(true);
   };
 
   const handlePrintSpecSheet = () => {
     window.print();
+  };
+
+  const handleExportPDF = () => {
+    alert("PDF export functionality will be implemented in the next phase");
+  };
+
+  const handleCompareSheet = (sheet: SpecSheet) => {
+    const mappedSheet = mapSpecSheet(sheet);
+    
+    if (compareSheets.length === 0) {
+      // First sheet selected for comparison
+      setCompareSheets([mappedSheet]);
+      setCompareMode(true);
+    } else if (compareSheets.length === 1) {
+      // Second sheet selected for comparison
+      setCompareSheets([...compareSheets, mappedSheet]);
+      setSelectedSheet(mappedSheet); // Set selected to the latest one
+      setActiveTab("compare");
+      setOpen(true);
+    } else {
+      // Already have 2 sheets, replace the second one
+      setCompareSheets([compareSheets[0], mappedSheet]);
+      setSelectedSheet(mappedSheet);
+      setActiveTab("compare");
+      setOpen(true);
+    }
+  };
+
+  const handleViewTableFormat = (sheet: SpecSheet) => {
+    setSelectedSheet(mapSpecSheet(sheet));
+    setCompareMode(false);
+    setCompareSheets([]);
+    setActiveTab("table");
+    setOpen(true);
+  };
+
+  const getAiConfidenceColor = (confidence: number | null | undefined) => {
+    if (!confidence) return "bg-gray-100 text-gray-800";
+    if (confidence >= 90) return "bg-green-100 text-green-800";
+    if (confidence >= 70) return "bg-blue-100 text-blue-800";
+    return "bg-yellow-100 text-yellow-800";
   };
 
   if (specSheets.length === 0) {
@@ -89,133 +139,289 @@ export default function SpecSheetViewer({ specSheets }: SpecSheetViewerProps) {
                 {sheet.generatedBy && ` by ${sheet.generatedBy}`}
               </div>
             </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => handleViewSpecSheet(sheet)}
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              View
-            </Button>
+            <div className="flex space-x-1">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => handleViewSpecSheet(sheet)}
+                title="View Sheet"
+              >
+                <EyeIcon className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => handleViewTableFormat(sheet)}
+                title="Table View"
+              >
+                <BarChart3 className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant={compareSheets.some(s => s.id === sheet.id) ? "secondary" : "ghost"}
+                size="sm" 
+                onClick={() => handleCompareSheet(sheet)}
+                title={compareSheets.length > 0 ? "Compare with selected sheet" : "Select for comparison"}
+              >
+                <ArrowLeftRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         ))}
+        
+        {compareSheets.length === 1 && (
+          <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
+            <p className="flex items-center">
+              <ArrowLeftRight className="h-4 w-4 mr-2 text-blue-500" />
+              Sheet selected for comparison. Select another sheet to compare.
+            </p>
+          </div>
+        )}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Specification Sheet</DialogTitle>
+            <DialogTitle>
+              {compareMode ? "Compare Specification Sheets" : "Specification Sheet"}
+            </DialogTitle>
             <DialogDescription>
-              Generated on {selectedSheet && formatDate(selectedSheet.generatedAt)}
+              {selectedSheet && formatDate(selectedSheet.generatedAt)}
             </DialogDescription>
           </DialogHeader>
           
           {selectedSheet && (
             <div className="space-y-6">
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" size="sm" onClick={handlePrintSpecSheet}>
-                  <Printer className="h-4 w-4 mr-2" />
-                  Print
-                </Button>
-                <Button variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  Download PDF
-                </Button>
+              <div className="flex justify-between items-center">
+                <Tabs 
+                  defaultValue={activeTab} 
+                  className="w-full" 
+                  onValueChange={setActiveTab}
+                >
+                  <TabsList>
+                    <TabsTrigger value="preview">
+                      <EyeIcon className="h-4 w-4 mr-2" />
+                      Preview
+                    </TabsTrigger>
+                    <TabsTrigger value="table">
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      Table View
+                    </TabsTrigger>
+                    {compareSheets.length > 1 && (
+                      <TabsTrigger value="compare">
+                        <ArrowLeftRight className="h-4 w-4 mr-2" />
+                        Compare
+                      </TabsTrigger>
+                    )}
+                  </TabsList>
+                </Tabs>
+                
+                <div className="flex space-x-2">
+                  <Button variant="outline" size="sm" onClick={handlePrintSpecSheet}>
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleExportPDF}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export PDF
+                  </Button>
+                </div>
               </div>
               
-              <div className="border rounded-md p-6 bg-white" id="spec-sheet-printable">
-                <div className="text-center mb-6">
-                  <h1 className="text-2xl font-bold">Product Specification Sheet</h1>
-                  <p className="text-gray-500">Reference: {safeGetContentValue(selectedSheet, 'content.enquiry.enquiryCode', 'N/A')}</p>
-                </div>
-                
-                <div className="grid md:grid-cols-2 gap-6 mb-6">
-                  <div>
-                    <h2 className="text-lg font-semibold mb-2">Customer Information</h2>
-                    <div className="space-y-1">
-                      <p><span className="font-medium">Company:</span> {safeGetContentValue(selectedSheet, 'content.enquiry.customerName', 'N/A')}</p>
-                      <p><span className="font-medium">Contact:</span> {safeGetContentValue(selectedSheet, 'content.enquiry.contactPerson', 'N/A')}</p>
-                      <p><span className="font-medium">Email:</span> {safeGetContentValue(selectedSheet, 'content.enquiry.contactEmail', 'N/A')}</p>
+              <Tabs defaultValue={activeTab} value={activeTab}>
+                <TabsContent value="preview" className="mt-0">
+                  <div className="border rounded-md p-6 bg-white" id="spec-sheet-printable">
+                    <div className="text-center mb-6">
+                      <h1 className="text-2xl font-bold">Product Specification Sheet</h1>
+                      <p className="text-gray-500">Reference: {safeGetContentValue(selectedSheet, 'content.enquiry.enquiryCode', 'N/A')}</p>
                     </div>
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold mb-2">Enquiry Details</h2>
-                    <div className="space-y-1">
-                      <p><span className="font-medium">Date Received:</span> {formatDate(safeGetContentValue(selectedSheet, 'content.enquiry.dateReceived', new Date()))}</p>
-                      <p><span className="font-medium">Deadline:</span> {
-                        safeGetContentValue(selectedSheet, 'content.enquiry.deadline') 
-                          ? formatDate(safeGetContentValue(selectedSheet, 'content.enquiry.deadline')) 
-                          : "Not specified"
-                      }</p>
-                      <p><span className="font-medium">Status:</span> {safeGetContentValue(selectedSheet, 'content.enquiry.status', 'Unknown')}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <Separator className="my-6" />
-                
-                <div className="mb-6">
-                  <h2 className="text-lg font-semibold mb-4">Product Specifications</h2>
-                  
-                  <ScrollArea className="max-h-[400px]">
-                    {safeGetContentValue(selectedSheet, 'content.specifications', []).map((spec: ProductSpecification, index: number) => (
-                      <div key={index} className="mb-6 border-b pb-6 last:border-b-0">
-                        <h3 className="font-medium text-lg">{spec.productType || 'Unknown Product Type'}</h3>
-                        <div className="grid md:grid-cols-2 gap-x-4 gap-y-2 mt-2">
-                          <div>
-                            <span className="text-sm text-gray-500">Dimensions</span>
-                            <p>{spec.dimensions || 'N/A'}</p>
-                          </div>
-                          <div>
-                            <span className="text-sm text-gray-500">Material</span>
-                            <p>{spec.material || 'N/A'}</p>
-                          </div>
-                          <div>
-                            <span className="text-sm text-gray-500">Quantity</span>
-                            <p>{spec.quantity || 'N/A'}</p>
-                          </div>
-                          <div>
-                            <span className="text-sm text-gray-500">Print Type</span>
-                            <p>{spec.printType || 'N/A'}</p>
-                          </div>
+                    
+                    <div className="grid md:grid-cols-2 gap-6 mb-6">
+                      <div>
+                        <h2 className="text-lg font-semibold mb-2">Customer Information</h2>
+                        <div className="space-y-1">
+                          <p><span className="font-medium">Company:</span> {safeGetContentValue(selectedSheet, 'content.enquiry.customerName', 'N/A')}</p>
+                          <p><span className="font-medium">Contact:</span> {safeGetContentValue(selectedSheet, 'content.enquiry.contactPerson', 'N/A')}</p>
+                          <p><span className="font-medium">Email:</span> {safeGetContentValue(selectedSheet, 'content.enquiry.contactEmail', 'N/A')}</p>
                         </div>
                       </div>
-                    ))}
-                  </ScrollArea>
-                </div>
-                
-                {(safeGetContentValue(selectedSheet, 'content.enquiry.specialInstructions') || 
-                  safeGetContentValue(selectedSheet, 'content.enquiry.deliveryRequirements')) && (
-                  <>
+                      <div>
+                        <h2 className="text-lg font-semibold mb-2">Enquiry Details</h2>
+                        <div className="space-y-1">
+                          <p><span className="font-medium">Date Received:</span> {formatDate(safeGetContentValue(selectedSheet, 'content.enquiry.dateReceived', new Date()))}</p>
+                          <p><span className="font-medium">Deadline:</span> {
+                            safeGetContentValue(selectedSheet, 'content.enquiry.deadline') 
+                              ? formatDate(safeGetContentValue(selectedSheet, 'content.enquiry.deadline')) 
+                              : "Not specified"
+                          }</p>
+                          <p><span className="font-medium">Status:</span> {safeGetContentValue(selectedSheet, 'content.enquiry.status', 'Unknown')}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
                     <Separator className="my-6" />
                     
-                    <div className="space-y-4">
-                      {safeGetContentValue(selectedSheet, 'content.enquiry.specialInstructions') && (
-                        <div>
-                          <h2 className="text-lg font-semibold mb-2">Special Instructions</h2>
-                          <p className="whitespace-pre-line">
-                            {safeGetContentValue(selectedSheet, 'content.enquiry.specialInstructions', 'No special instructions provided')}
-                          </p>
-                        </div>
-                      )}
+                    <div className="mb-6">
+                      <h2 className="text-lg font-semibold mb-4">Product Specifications</h2>
                       
-                      {safeGetContentValue(selectedSheet, 'content.enquiry.deliveryRequirements') && (
-                        <div>
-                          <h2 className="text-lg font-semibold mb-2">Delivery Requirements</h2>
-                          <p className="whitespace-pre-line">
-                            {safeGetContentValue(selectedSheet, 'content.enquiry.deliveryRequirements', 'No delivery requirements provided')}
-                          </p>
-                        </div>
-                      )}
+                      <ScrollArea className="max-h-[400px]">
+                        {safeGetContentValue(selectedSheet, 'content.specifications', []).map((spec: ProductSpecification, index: number) => (
+                          <div key={index} className="mb-6 border-b pb-6 last:border-b-0">
+                            <h3 className="font-medium text-lg">{spec.productType || 'Unknown Product Type'}</h3>
+                            <div className="grid md:grid-cols-2 gap-x-4 gap-y-2 mt-2">
+                              <div>
+                                <span className="text-sm text-gray-500">Dimensions</span>
+                                <p>{spec.dimensions || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <span className="text-sm text-gray-500">Material</span>
+                                <p>{spec.material || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <span className="text-sm text-gray-500">Quantity</span>
+                                <p>{spec.quantity || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <span className="text-sm text-gray-500">Print Type</span>
+                                <p>{spec.printType || 'N/A'}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </ScrollArea>
                     </div>
-                  </>
-                )}
+                    
+                    {(safeGetContentValue(selectedSheet, 'content.enquiry.specialInstructions') || 
+                      safeGetContentValue(selectedSheet, 'content.enquiry.deliveryRequirements')) && (
+                      <>
+                        <Separator className="my-6" />
+                        
+                        <div className="space-y-4">
+                          {safeGetContentValue(selectedSheet, 'content.enquiry.specialInstructions') && (
+                            <div>
+                              <h2 className="text-lg font-semibold mb-2">Special Instructions</h2>
+                              <p className="whitespace-pre-line">
+                                {safeGetContentValue(selectedSheet, 'content.enquiry.specialInstructions', 'No special instructions provided')}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {safeGetContentValue(selectedSheet, 'content.enquiry.deliveryRequirements') && (
+                            <div>
+                              <h2 className="text-lg font-semibold mb-2">Delivery Requirements</h2>
+                              <p className="whitespace-pre-line">
+                                {safeGetContentValue(selectedSheet, 'content.enquiry.deliveryRequirements', 'No delivery requirements provided')}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                    
+                    <div className="text-center text-xs text-gray-500 mt-8">
+                      Generated by AI-Integrated Enquiry System • {formatDate(selectedSheet.generatedAt)}
+                      <div>Version {selectedSheet.version}</div>
+                    </div>
+                  </div>
+                </TabsContent>
                 
-                <div className="text-center text-xs text-gray-500 mt-8">
-                  Generated by AI-Integrated Enquiry System • {formatDate(selectedSheet.generatedAt)}
-                  <div>Version {selectedSheet.version}</div>
-                </div>
-              </div>
+                <TabsContent value="table" className="mt-0">
+                  <div className="border rounded-md p-6 bg-white">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-lg font-semibold">Product Specifications Table</h2>
+                      <Badge variant="outline">
+                        Version {selectedSheet.version}
+                      </Badge>
+                    </div>
+                    
+                    <Table>
+                      <TableCaption>Generated on {formatDate(selectedSheet.generatedAt)}</TableCaption>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Product Type</TableHead>
+                          <TableHead>Dimensions</TableHead>
+                          <TableHead>Material</TableHead>
+                          <TableHead>Quantity</TableHead>
+                          <TableHead>Print Type</TableHead>
+                          <TableHead>Confidence</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {safeGetContentValue(selectedSheet, 'content.specifications', []).map((spec: ProductSpecification, index: number) => (
+                          <TableRow key={index}>
+                            <TableCell className="font-medium">{spec.productType || 'Unknown'}</TableCell>
+                            <TableCell>{spec.dimensions || 'N/A'}</TableCell>
+                            <TableCell>{spec.material || 'N/A'}</TableCell>
+                            <TableCell>{spec.quantity || 'N/A'}</TableCell>
+                            <TableCell>{spec.printType || 'N/A'}</TableCell>
+                            <TableCell>
+                              {spec.aiConfidence ? (
+                                <Badge className={getAiConfidenceColor(spec.aiConfidence)}>
+                                  {spec.aiConfidence}%
+                                </Badge>
+                              ) : 'N/A'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </TabsContent>
+                
+                {compareSheets.length > 1 && (
+                  <TabsContent value="compare" className="mt-0">
+                    <div className="border rounded-md p-6 bg-white">
+                      <h2 className="text-lg font-semibold mb-4">Specification Comparison</h2>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        {compareSheets.map((sheet, index) => (
+                          <div key={index} className={`p-4 rounded-md ${index === 0 ? 'bg-blue-50 border border-blue-200' : 'bg-green-50 border border-green-200'}`}>
+                            <div className="flex items-center justify-between mb-2">
+                              <Badge variant="outline" className={index === 0 ? 'bg-blue-100' : 'bg-green-100'}>
+                                Version {sheet.version}
+                              </Badge>
+                              <div className="text-xs text-gray-500">
+                                {formatDate(sheet.generatedAt)}
+                              </div>
+                            </div>
+                            
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="w-[180px]">Specification</TableHead>
+                                  <TableHead>Value</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {safeGetContentValue(sheet, 'content.specifications', []).map((spec: ProductSpecification, specIndex: number) => (
+                                  <TableRow key={specIndex}>
+                                    <TableCell className="font-medium">Product {specIndex + 1}</TableCell>
+                                    <TableCell>
+                                      <div className="space-y-1">
+                                        <div><span className="font-medium">Type:</span> {spec.productType || 'N/A'}</div>
+                                        <div><span className="font-medium">Material:</span> {spec.material || 'N/A'}</div>
+                                        <div><span className="font-medium">Dimensions:</span> {spec.dimensions || 'N/A'}</div>
+                                        <div><span className="font-medium">Quantity:</span> {spec.quantity || 'N/A'}</div>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                                <TableRow>
+                                  <TableCell className="font-medium">Special Instructions</TableCell>
+                                  <TableCell>{safeGetContentValue(sheet, 'content.enquiry.specialInstructions') || 'None'}</TableCell>
+                                </TableRow>
+                                <TableRow>
+                                  <TableCell className="font-medium">Delivery Requirements</TableCell>
+                                  <TableCell>{safeGetContentValue(sheet, 'content.enquiry.deliveryRequirements') || 'None'}</TableCell>
+                                </TableRow>
+                              </TableBody>
+                            </Table>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </TabsContent>
+                )}
+              </Tabs>
             </div>
           )}
         </DialogContent>
