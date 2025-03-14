@@ -160,8 +160,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Get file paths from storage
         filePaths = validFiles
-          .filter(file => file && typeof file.path === 'string' && file.path.length > 0)
-          .map(file => file.path as string);
+          .filter(Boolean)
+          .map(file => {
+            if (file && typeof file.path === 'string' && file.path.length > 0) {
+              return file.path;
+            }
+            return null;
+          })
+          .filter((path): path is string => path !== null);
       }
       
       // Extract data using OpenAI
