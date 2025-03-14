@@ -55,7 +55,17 @@ export default function AuthPage() {
 
   // Make sure to do this after the hook calls
   if (user) {
-    return <Redirect to="/" />;
+    setTimeout(() => {
+      // This ensures we redirect after the component fully renders and auth state is updated
+      window.location.href = '/';
+    }, 100);
+    
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Redirecting to dashboard...</span>
+      </div>
+    );
   }
 
   return (
