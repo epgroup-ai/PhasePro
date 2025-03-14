@@ -52,35 +52,18 @@ export default function AuthPage() {
 
   const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
     console.log("Login form submitted:", values);
-    console.log("Current cookies:", document.cookie);
     
     try {
       console.log("Calling login mutation...");
       const user = await loginMutation.mutateAsync(values);
       console.log("Login mutation completed successfully with user:", user);
-      console.log("Current cookies after login:", document.cookie);
       
-      // Test if we can access /api/user after login
-      try {
-        console.log("Testing API user endpoint directly...");
-        const userCheckResponse = await fetch('/api/user', { 
-          credentials: 'include',
-          headers: { 'Cache-Control': 'no-cache' }
-        });
-        
-        if (userCheckResponse.ok) {
-          const userData = await userCheckResponse.json();
-          console.log("API user endpoint returned:", userData);
-        } else {
-          console.error("API user endpoint failed with status:", userCheckResponse.status);
-        }
-      } catch (apiError) {
-        console.error("Error checking user API:", apiError);
-      }
+      // After successful login, refetch the user data
+      await refetchUser();
       
+      // Use setLocation to navigate
       console.log("Redirecting to dashboard...");
-      // Force navigation immediately after successful login
-      window.location.href = '/';
+      setLocation('/');
     } catch (error) {
       console.error("Login failed:", error);
     }
@@ -90,8 +73,13 @@ export default function AuthPage() {
     try {
       await registerMutation.mutateAsync(values);
       console.log("Registration completed successfully");
-      // Force navigation immediately after successful registration
-      window.location.href = '/';
+      
+      // After successful registration, refetch the user data
+      await refetchUser();
+      
+      // Use setLocation to navigate
+      console.log("Redirecting to dashboard after registration...");
+      setLocation('/');
     } catch (error) {
       console.error("Registration failed:", error);
     }
@@ -99,16 +87,17 @@ export default function AuthPage() {
 
   // Make sure to do this after the hook calls
   if (user) {
-    setTimeout(() => {
-      // This ensures we redirect after the component fully renders and auth state is updated
-      window.location.href = '/';
-    }, 100);
+    console.log("User already authenticated, redirecting to dashboard...");
     
+    // Use both Redirect component and programmatic navigation for reliability
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Redirecting to dashboard...</span>
-      </div>
+      <>
+        <Redirect to="/" />
+        <div className="flex min-h-screen items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Redirecting to dashboard...</span>
+        </div>
+      </>
     );
   }
 
