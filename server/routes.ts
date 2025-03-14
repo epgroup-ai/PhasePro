@@ -1,4 +1,4 @@
-import type { Express, Response } from "express";
+import type { Express, Response, NextFunction } from "express";
 import { Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
@@ -11,6 +11,7 @@ import { fromZodError } from "zod-validation-error";
 import path from "path";
 import fs from "fs";
 import os from "os";
+import { setupAuth } from "./auth";
 
 // Add type definition for multer
 interface File {
@@ -62,6 +63,17 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Set up authentication
+  setupAuth(app);
+
+  // Authentication middleware for protected routes
+  const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+    next();
+  };
+
   // Error handling middleware
   const handleError = (err: any, res: Response) => {
     if (err instanceof ZodError) {
@@ -75,7 +87,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Get dashboard stats
-  app.get('/api/stats', async (req: Request, res: Response) => {
+  app.get('/api/stats', requireAuth, async (req: Request, res: Response) => {
     try {
       const stats = await storage.getDashboardStats();
       res.json(stats);
@@ -85,7 +97,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // File upload endpoint
-  app.post('/api/upload', upload.array('files', 5), async (req, res: Response) => {
+  app.post('/api/upload', requireAuth, upload.array('files', 5), async (req, res: Response) => {
     try {
       // Cast req to any to bypass TypeScript limitations with multer
       const multerReq = req as any;
@@ -121,7 +133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Process files with AI
-  app.post('/api/process', async (req: Request, res: Response) => {
+  app.post('/api/process', requireAuth, async (req: Request, res: Response) => {
     try {
       const { fileIds, sampleDocType } = z.object({ 
         fileIds: z.array(z.number()), 
@@ -223,7 +235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all enquiries
-  app.get('/api/enquiries', async (req: Request, res: Response) => {
+  app.get('/api/enquiries', requireAuth, async (req: Request, res: Response) => {
     try {
       const enquiries = await storage.getAllEnquiries();
       res.json(enquiries);
@@ -233,7 +245,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get enquiry by ID
-  app.get('/api/enquiries/:id', async (req: Request, res: Response) => {
+  app.get('/api/enquiries/:id', requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const enquiry = await storage.getEnquiry(id);
@@ -258,7 +270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update enquiry
-  app.patch('/api/enquiries/:id', async (req: Request, res: Response) => {
+  app.patch('/api/enquiries/:id', requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const enquiry = await storage.getEnquiry(id);
