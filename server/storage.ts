@@ -85,6 +85,17 @@ export class MemStorage implements IStorage {
     this.enquiryCurrentId = 1;
     this.specSheetCurrentId = 1;
 
+    // Add a test user (factory worker)
+    this.createUser({
+      username: 'testuser',
+      password: '$2a$10$4gVBKcJzZtL/wmgIXUqDoeUf9eqKAufJR5PvFwEvQf5yWUEjDF/Om', // hashed version of 'testpassword'
+      email: 'test@example.com',
+      fullName: 'Test User',
+      role: 'user'
+    }).then(user => {
+      console.log('Test user created:', user);
+    });
+
     // Add some initial data for the dashboard
     this.createEnquiry({
       enquiryCode: 'ENQ-2023-0042',

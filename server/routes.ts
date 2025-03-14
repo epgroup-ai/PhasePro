@@ -55,6 +55,11 @@ const upload = multer({
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication
   setupAuth(app);
+  
+  // Test route to verify API functionality (no auth required)
+  app.get('/api/test', (req: Request, res: Response) => {
+    res.json({ success: true, message: 'API is working' });
+  });
 
   // Authentication middleware for protected routes
   const requireAuth = (req: Request, res: Response, next: NextFunction) => {
