@@ -10,7 +10,17 @@ import memorystore from "memorystore";
 
 declare global {
   namespace Express {
-    interface User extends User {}
+    // Define the User interface for Express
+    interface User {
+      id: number;
+      username: string;
+      password: string;
+      email: string | null;
+      fullName: string | null;
+      role: string;
+      createdAt: Date;
+      lastLogin: Date | null;
+    }
   }
 }
 
@@ -109,7 +119,7 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err, user, info) => {
+    passport.authenticate("local", (err: Error | null, user: Express.User | false, info: { message: string } | undefined) => {
       if (err) return next(err);
       if (!user) return res.status(401).json({ error: info?.message || "Authentication failed" });
       

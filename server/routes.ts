@@ -289,7 +289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update product specification
-  app.patch('/api/specifications/:id', async (req: Request, res: Response) => {
+  app.patch('/api/specifications/:id', requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const spec = await storage.getProductSpecification(id);
@@ -308,7 +308,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate spec sheet
-  app.post('/api/enquiries/:id/generate-spec-sheet', async (req: Request, res: Response) => {
+  app.post('/api/enquiries/:id/generate-spec-sheet', requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const enquiry = await storage.getEnquiry(id);
@@ -337,7 +337,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete file
-  app.delete('/api/files/:id', async (req: Request, res: Response) => {
+  app.delete('/api/files/:id', requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const file = await storage.getFile(id);
