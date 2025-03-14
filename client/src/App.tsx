@@ -13,6 +13,7 @@ import Footer from "@/components/layout/footer";
 import { AuthProvider } from "./hooks/use-auth";
 import { useAuth } from "./hooks/use-auth";
 import { Loader2 } from "lucide-react";
+import { TourProvider } from "@/components/ui/tooltip-tour";
 
 // Custom ProtectedRoute component that avoids the separate file dependency
 function ProtectedRoute({
@@ -132,7 +133,9 @@ function AuthenticatedRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <AuthenticatedRoutes />
+      <TourProvider>
+        <AuthenticatedRoutes />
+      </TourProvider>
     </AuthProvider>
   );
 }
