@@ -303,4 +303,287 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import connectPg from "connect-pg-simple";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import { env } from "process";
+
+// PostgreSQL Database implementation
+export class DatabaseStorage implements IStorage {
+  public sessionStore: session.Store;
+  private db: any;
+  private queryClient: any;
+
+  constructor() {
+    // Connect to PostgreSQL
+    const connectionString = env.DATABASE_URL;
+    if (!connectionString) {
+      throw new Error("DATABASE_URL environment variable is not set");
+    }
+
+    // Create Postgres client
+    const client = postgres(connectionString);
+    this.db = drizzle(client);
+    
+    // Session store
+    const PostgresSessionStore = connectPg(session);
+    this.sessionStore = new PostgresSessionStore({ 
+      conObject: {
+        connectionString,
+      },
+      createTableIfMissing: true
+    });
+  }
+
+  // User methods
+  async getUser(id: number): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.id, id)).limit(1);
+    return result[0] || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.username, username)).limit(1);
+    return result[0] || undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    if (!email) return undefined;
+    const result = await this.db.select().from(users).where(eq(users.email, email)).limit(1);
+    return result[0] || undefined;
+  }
+
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+    // We're not implementing Google Auth for now
+    return undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const role = insertUser.role || "user";
+    const fullName = insertUser.fullName || null;
+    const email = insertUser.email || null;
+    
+    const result = await this.db.insert(users).values({
+      ...insertUser,
+      role,
+      fullName,
+      email,
+      createdAt: new Date(),
+      lastLogin: null
+    }).returning();
+    
+    return result[0];
+  }
+
+  async updateUser(id: number, data: Partial<InsertUser>): Promise<User> {
+    const result = await this.db
+      .update(users)
+      .set(data)
+      .where(eq(users.id, id))
+      .returning();
+    
+    return result[0];
+  }
+
+  async updateUserLoginTime(id: number): Promise<User> {
+    const result = await this.db
+      .update(users)
+      .set({ lastLogin: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    
+    return result[0];
+  }
+
+  // File methods
+  async saveFile(insertFile: InsertFile): Promise<File> {
+    const path = insertFile.path || null;
+    const enquiryId = insertFile.enquiryId || null;
+    
+    const result = await this.db.insert(files).values({
+      ...insertFile,
+      path,
+      enquiryId,
+      uploadedAt: new Date()
+    }).returning();
+    
+    return result[0];
+  }
+
+  async getFile(id: number): Promise<File | undefined> {
+    const result = await this.db.select().from(files).where(eq(files.id, id)).limit(1);
+    return result[0] || undefined;
+  }
+
+  async getFilesByEnquiryId(enquiryId: number): Promise<File[]> {
+    const result = await this.db.select().from(files).where(eq(files.enquiryId, enquiryId));
+    return result;
+  }
+
+  async updateFile(id: number, data: Partial<InsertFile>): Promise<File> {
+    const result = await this.db
+      .update(files)
+      .set(data)
+      .where(eq(files.id, id))
+      .returning();
+    
+    return result[0];
+  }
+
+  async deleteFile(id: number): Promise<void> {
+    await this.db.delete(files).where(eq(files.id, id));
+  }
+
+  // Product Specification methods
+  async createProductSpecification(insertSpec: InsertProductSpecification): Promise<ProductSpecification> {
+    const aiConfidence = insertSpec.aiConfidence || null;
+    const verified = insertSpec.verified || null;
+    
+    const result = await this.db.insert(productSpecifications).values({
+      ...insertSpec,
+      aiConfidence,
+      verified
+    }).returning();
+    
+    return result[0];
+  }
+
+  async getProductSpecification(id: number): Promise<ProductSpecification | undefined> {
+    const result = await this.db.select().from(productSpecifications).where(eq(productSpecifications.id, id)).limit(1);
+    return result[0] || undefined;
+  }
+
+  async getProductSpecificationsByEnquiryId(enquiryId: number): Promise<ProductSpecification[]> {
+    const result = await this.db.select().from(productSpecifications).where(eq(productSpecifications.enquiryId, enquiryId));
+    return result;
+  }
+
+  async updateProductSpecification(id: number, data: Partial<InsertProductSpecification>): Promise<ProductSpecification> {
+    const result = await this.db
+      .update(productSpecifications)
+      .set(data)
+      .where(eq(productSpecifications.id, id))
+      .returning();
+    
+    return result[0];
+  }
+
+  async deleteProductSpecification(id: number): Promise<void> {
+    await this.db.delete(productSpecifications).where(eq(productSpecifications.id, id));
+  }
+
+  // Enquiry methods
+  async createEnquiry(insertEnquiry: InsertEnquiry): Promise<Enquiry> {
+    const contactPerson = insertEnquiry.contactPerson || null;
+    const contactEmail = insertEnquiry.contactEmail || null;
+    const deadline = insertEnquiry.deadline || null;
+    const specialInstructions = insertEnquiry.specialInstructions || null;
+    const deliveryRequirements = insertEnquiry.deliveryRequirements || null;
+    const processingTime = insertEnquiry.processingTime || null;
+    const status = insertEnquiry.status || "pending";
+    
+    const result = await this.db.insert(enquiries).values({
+      ...insertEnquiry,
+      status,
+      contactPerson,
+      contactEmail,
+      deadline,
+      specialInstructions,
+      deliveryRequirements,
+      processingTime
+    }).returning();
+    
+    return result[0];
+  }
+
+  async getEnquiry(id: number): Promise<Enquiry | undefined> {
+    const result = await this.db.select().from(enquiries).where(eq(enquiries.id, id)).limit(1);
+    return result[0] || undefined;
+  }
+
+  async getEnquiryByCode(enquiryCode: string): Promise<Enquiry | undefined> {
+    const result = await this.db.select().from(enquiries).where(eq(enquiries.enquiryCode, enquiryCode)).limit(1);
+    return result[0] || undefined;
+  }
+
+  async getAllEnquiries(): Promise<Enquiry[]> {
+    const result = await this.db.select().from(enquiries);
+    return result;
+  }
+
+  async updateEnquiry(id: number, data: Partial<InsertEnquiry>): Promise<Enquiry> {
+    const result = await this.db
+      .update(enquiries)
+      .set(data)
+      .where(eq(enquiries.id, id))
+      .returning();
+    
+    return result[0];
+  }
+
+  async deleteEnquiry(id: number): Promise<void> {
+    await this.db.delete(enquiries).where(eq(enquiries.id, id));
+  }
+
+  // Spec Sheet methods
+  async createSpecSheet(insertSpecSheet: InsertSpecSheet): Promise<SpecSheet> {
+    const version = insertSpecSheet.version || 1;
+    const generatedBy = insertSpecSheet.generatedBy || null;
+    
+    const result = await this.db.insert(specSheets).values({
+      ...insertSpecSheet,
+      version,
+      generatedBy,
+      generatedAt: new Date()
+    }).returning();
+    
+    return result[0];
+  }
+
+  async getSpecSheet(id: number): Promise<SpecSheet | undefined> {
+    const result = await this.db.select().from(specSheets).where(eq(specSheets.id, id)).limit(1);
+    return result[0] || undefined;
+  }
+
+  async getSpecSheetsByEnquiryId(enquiryId: number): Promise<SpecSheet[]> {
+    const result = await this.db.select().from(specSheets).where(eq(specSheets.enquiryId, enquiryId));
+    return result;
+  }
+
+  // Dashboard Stats
+  async getDashboardStats(): Promise<DashboardStats> {
+    // Total enquiries
+    const allEnquiries = await this.db.select().from(enquiries);
+    const totalEnquiries = allEnquiries.length;
+    
+    // Processed enquiries
+    const processedEnquiries = allEnquiries.filter(e => e.status === 'processed').length;
+    
+    // Pending enquiries
+    const pendingEnquiries = allEnquiries.filter(e => e.status === 'pending').length;
+    
+    // Average processing time (in seconds)
+    const processedWithTime = allEnquiries.filter(e => e.status === 'processed' && e.processingTime != null);
+    const avgProcessingTime = processedWithTime.length > 0
+      ? processedWithTime.reduce((acc, curr) => acc + (curr.processingTime || 0), 0) / processedWithTime.length
+      : 0;
+    
+    // Recent enquiries (last 5)
+    const recentEnquiries = [...allEnquiries]
+      .sort((a, b) => new Date(b.dateReceived).getTime() - new Date(a.dateReceived).getTime())
+      .slice(0, 5);
+    
+    return {
+      totalEnquiries,
+      processedEnquiries,
+      pendingEnquiries,
+      avgProcessingTime,
+      recentEnquiries
+    };
+  }
+}
+
+// Import drizzle-orm functions
+import { eq } from "drizzle-orm";
+
+// Use PostgreSQL storage instead of memory storage
+export const storage = new DatabaseStorage();
