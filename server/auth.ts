@@ -38,8 +38,21 @@ export function setupAuth(app: Express) {
     cookie: {
       secure: process.env.NODE_ENV === "production",
       maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+      httpOnly: true,
+      sameSite: 'lax'
     }
   };
+  
+  console.log("Session configuration:", {
+    secret: process.env.SESSION_SECRET ? "Custom secret" : "Default secret",
+    store: storage.sessionStore ? "Using session store" : "No session store",
+    cookie: {
+      secure: sessionSettings.cookie?.secure,
+      maxAge: sessionSettings.cookie?.maxAge,
+      httpOnly: sessionSettings.cookie?.httpOnly,
+      sameSite: sessionSettings.cookie?.sameSite,
+    }
+  });
 
   app.set("trust proxy", 1);
   app.use(session(sessionSettings));
