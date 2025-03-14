@@ -59,11 +59,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: (user: User) => {
+      console.log("Login success - User data:", user);
       queryClient.setQueryData(['/api/user'], user);
+      console.log("Cache updated with user data");
       toast({
         title: "Login successful",
         description: `Welcome back, ${user.fullName || user.username}!`,
       });
+      // Debug the auth state
+      console.log("After login - Redirecting to /");
     },
     onError: (error: Error) => {
       toast({

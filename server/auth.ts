@@ -97,12 +97,24 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
+    console.log("Login attempt for username:", req.body.username);
+    
     passport.authenticate("local", (err, user, info) => {
-      if (err) return next(err);
-      if (!user) return res.status(401).json({ message: "Invalid username or password" });
+      if (err) {
+        console.error("Auth error:", err);
+        return next(err);
+      }
+      if (!user) {
+        console.log("Authentication failed - Invalid credentials");
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
       
       req.login(user, (err) => {
-        if (err) return next(err);
+        if (err) {
+          console.error("Login error:", err);
+          return next(err);
+        }
+        console.log("Authentication successful for user ID:", user.id);
         return res.status(200).json(user);
       });
     })(req, res, next);
@@ -116,8 +128,14 @@ export function setupAuth(app: Express) {
   });
 
   app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    res.json(req.user);
+    console.log("GET /api/user - isAuthenticated:", req.isAuthenticated());
+    if (req.isAuthenticated()) {
+      console.log("Authenticated user:", req.user);
+      return res.json(req.user);
+    } else {
+      console.log("User not authenticated");
+      return res.sendStatus(401);
+    }
   });
 }
 

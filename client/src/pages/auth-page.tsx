@@ -26,6 +26,10 @@ const registerSchema = z.object({
 export default function AuthPage() {
   const { user, isLoading, loginMutation, registerMutation } = useAuth();
   
+  // Debug the auth state
+  console.log("Auth Page - User:", user);
+  console.log("Auth Page - isLoading:", isLoading);
+  
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -45,12 +49,26 @@ export default function AuthPage() {
     },
   });
 
-  const onLoginSubmit = (values: z.infer<typeof loginSchema>) => {
-    loginMutation.mutate(values);
+  const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
+    try {
+      await loginMutation.mutateAsync(values);
+      console.log("Login mutation completed successfully");
+      // Force navigation immediately after successful login
+      window.location.href = '/';
+    } catch (error) {
+      console.error("Login failed:", error);
+    }
   };
 
-  const onRegisterSubmit = (values: z.infer<typeof registerSchema>) => {
-    registerMutation.mutate(values);
+  const onRegisterSubmit = async (values: z.infer<typeof registerSchema>) => {
+    try {
+      await registerMutation.mutateAsync(values);
+      console.log("Registration completed successfully");
+      // Force navigation immediately after successful registration
+      window.location.href = '/';
+    } catch (error) {
+      console.error("Registration failed:", error);
+    }
   };
 
   // Make sure to do this after the hook calls
