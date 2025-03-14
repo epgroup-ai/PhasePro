@@ -1,11 +1,10 @@
-import React, { useState, useEffect, createContext, useContext, useCallback, ReactNode } from 'react';
-import { Button } from '@/components/ui/button';
-import { useMediaQuery } from '@/hooks/use-media-query';
-import { X, ArrowRight, ArrowLeft } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useLocalStorage } from '@/hooks/use-local-storage';
+import { ReactNode, createContext, useContext, useEffect, useState } from "react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
+import { useIsMobile } from "@/hooks/use-media-query";
+import { Button } from "./button";
+import { ChevronRight, X } from "lucide-react";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 
-// Define the shape of a tour step
 export interface TourStep {
   target: string;
   title: string;
@@ -13,7 +12,6 @@ export interface TourStep {
   placement?: 'top' | 'bottom' | 'left' | 'right';
 }
 
-// Context to manage the tour state
 interface TourContextProps {
   currentTour: string | null;
   startTour: (tourId: string) => void;
@@ -25,179 +23,100 @@ interface TourContextProps {
 
 const TourContext = createContext<TourContextProps | undefined>(undefined);
 
-// Provider component for the tour context
 export function TourProvider({ children }: { children: ReactNode }) {
   const [currentTour, setCurrentTour] = useState<string | null>(null);
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [currentStep, setCurrentStep] = useState<number>(0);
   const [tours, setTours] = useState<Record<string, TourStep[]>>({});
   const [completedTours, setCompletedTours] = useLocalStorage<string[]>('completed-tours', []);
-  const [tourSteps, setTourSteps] = useState<TourStep[]>([]);
-  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
-  const [tooltipSize, setTooltipSize] = useState({ width: 0, height: 0 });
-  const isMobile = useMediaQuery('(max-width: 640px)');
-
-  // Register a new tour
-  const registerTour = useCallback((tourId: string, steps: TourStep[]) => {
+  const [activeElement, setActiveElement] = useState<Element | null>(null);
+  
+  // When the current tour changes, reset the step to 0
+  useEffect(() => {
+    setCurrentStep(0);
+  }, [currentTour]);
+  
+  // When the current tour or step changes, find the target element
+  useEffect(() => {
+    if (!currentTour) {
+      setActiveElement(null);
+      return;
+    }
+    
+    const steps = tours[currentTour];
+    if (!steps || !steps[currentStep]) {
+      return;
+    }
+    
+    const targetSelector = steps[currentStep].target;
+    const element = document.querySelector(targetSelector);
+    
+    if (element) {
+      // Remove highlight from any previously highlighted element
+      document.querySelectorAll('.tour-highlight').forEach(el => {
+        el.classList.remove('tour-highlight');
+      });
+      
+      // Add highlight to current element
+      element.classList.add('tour-highlight');
+      setActiveElement(element);
+      
+      // Scroll element into view if needed
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
+    return () => {
+      // Clean up highlight on unmount
+      document.querySelectorAll('.tour-highlight').forEach(el => {
+        el.classList.remove('tour-highlight');
+      });
+    };
+  }, [currentTour, currentStep, tours]);
+  
+  const registerTour = (tourId: string, steps: TourStep[]) => {
     setTours(prev => ({ ...prev, [tourId]: steps }));
-  }, []);
-
-  // Start a tour
-  const startTour = useCallback((tourId: string) => {
+  };
+  
+  const startTour = (tourId: string) => {
     if (tours[tourId]) {
       setCurrentTour(tourId);
-      setCurrentStepIndex(0);
-      setTourSteps(tours[tourId]);
+      setCurrentStep(0);
+    } else {
+      console.warn(`Tour "${tourId}" not found`);
     }
-  }, [tours]);
-
-  // End the current tour
-  const endTour = useCallback(() => {
+  };
+  
+  const endTour = () => {
     if (currentTour) {
-      setCompletedTours(prev => [...prev, currentTour]);
+      setCompletedTours(prev => {
+        if (!prev.includes(currentTour)) {
+          return [...prev, currentTour];
+        }
+        return prev;
+      });
     }
     setCurrentTour(null);
-  }, [currentTour, setCompletedTours]);
-
-  // Reset all tours
-  const resetTours = useCallback(() => {
-    setCompletedTours([]);
-  }, [setCompletedTours]);
-
-  // Update tooltip position when step changes
-  useEffect(() => {
-    if (!currentTour || !tourSteps.length) return;
-
-    const currentStep = tourSteps[currentStepIndex];
-    if (!currentStep) return;
-
-    const targetElement = document.querySelector(currentStep.target);
-    if (!targetElement) return;
-
-    const targetRect = targetElement.getBoundingClientRect();
-    const placement = currentStep.placement || 'bottom';
+  };
+  
+  const goToNextStep = () => {
+    if (!currentTour) return;
     
-    // Highlight the target element
-    targetElement.classList.add('tour-highlight');
-    
-    // Calculate tooltip position based on placement
-    const tooltipElement = document.getElementById('tooltip-container');
-    const tooltipWidth = tooltipElement?.offsetWidth || 300;
-    const tooltipHeight = tooltipElement?.offsetHeight || 200;
-    
-    setTooltipSize({ width: tooltipWidth, height: tooltipHeight });
-    
-    let top = 0;
-    let left = 0;
-    
-    if (placement === 'top') {
-      top = targetRect.top - tooltipHeight - 10;
-      left = targetRect.left + (targetRect.width / 2) - (tooltipWidth / 2);
-    } else if (placement === 'bottom') {
-      top = targetRect.bottom + 10;
-      left = targetRect.left + (targetRect.width / 2) - (tooltipWidth / 2);
-    } else if (placement === 'left') {
-      top = targetRect.top + (targetRect.height / 2) - (tooltipHeight / 2);
-      left = targetRect.left - tooltipWidth - 10;
-    } else if (placement === 'right') {
-      top = targetRect.top + (targetRect.height / 2) - (tooltipHeight / 2);
-      left = targetRect.right + 10;
-    }
-    
-    // Adjust if outside of viewport
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    
-    if (left < 20) left = 20;
-    if (left + tooltipWidth > viewportWidth - 20) left = viewportWidth - tooltipWidth - 20;
-    if (top < 20) top = 20;
-    if (top + tooltipHeight > viewportHeight - 20) top = viewportHeight - tooltipHeight - 20;
-    
-    // Position tooltip
-    setTooltipPosition({ top, left });
-    
-    // Clean up highlight on unmount
-    return () => {
-      targetElement.classList.remove('tour-highlight');
-    };
-  }, [currentTour, currentStepIndex, tourSteps, isMobile]);
-
-  // Handle next step
-  const handleNext = () => {
-    if (currentStepIndex < tourSteps.length - 1) {
-      setCurrentStepIndex(prev => prev + 1);
+    const steps = tours[currentTour];
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(prev => prev + 1);
     } else {
       endTour();
     }
   };
-
-  // Handle previous step
-  const handlePrevious = () => {
-    if (currentStepIndex > 0) {
-      setCurrentStepIndex(prev => prev - 1);
-    }
+  
+  const goToPreviousStep = () => {
+    if (!currentTour || currentStep === 0) return;
+    setCurrentStep(prev => prev - 1);
   };
-
-  // Render the tooltip if a tour is active
-  const renderTooltip = () => {
-    if (!currentTour || !tourSteps.length) return null;
-
-    const currentStep = tourSteps[currentStepIndex];
-    if (!currentStep) return null;
-
-    return (
-      <div
-        id="tooltip-container"
-        className="fixed z-50 bg-white rounded-lg shadow-lg p-4 border border-gray-200 w-80 transition-all duration-300"
-        style={{
-          top: `${tooltipPosition.top}px`,
-          left: `${tooltipPosition.left}px`,
-        }}
-      >
-        <div className="flex justify-between items-center mb-2">
-          <h3 className="font-bold text-lg">{currentStep.title}</h3>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 rounded-full" 
-            onClick={endTour}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-        <div className="mb-4">{currentStep.content}</div>
-        <div className="flex justify-between">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePrevious}
-            disabled={currentStepIndex === 0}
-            className={cn(currentStepIndex === 0 && "opacity-50 cursor-not-allowed")}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Previous
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleNext}
-          >
-            {currentStepIndex < tourSteps.length - 1 ? (
-              <>
-                Next
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </>
-            ) : (
-              'Finish'
-            )}
-          </Button>
-        </div>
-        <div className="text-center text-xs text-gray-500 mt-2">
-          {currentStepIndex + 1} / {tourSteps.length}
-        </div>
-      </div>
-    );
+  
+  const resetTours = () => {
+    setCompletedTours([]);
   };
-
+  
   return (
     <TourContext.Provider
       value={{
@@ -210,25 +129,80 @@ export function TourProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-      {renderTooltip()}
-      {/* Add a background overlay when tour is active */}
-      {currentTour && (
-        <div className="fixed inset-0 bg-black/20 z-40" onClick={(e) => e.target === e.currentTarget && endTour()} />
+      
+      {/* Tour tooltip */}
+      {currentTour && activeElement && tours[currentTour] && tours[currentTour][currentStep] && (
+        <TooltipProvider>
+          <Tooltip open={true}>
+            <TooltipTrigger asChild>
+              <span className="hidden" />
+            </TooltipTrigger>
+            <TooltipContent
+              side={tours[currentTour][currentStep].placement || 'bottom'}
+              align="center"
+              className="w-80 p-0 border-2 border-primary/20"
+              sideOffset={5}
+            >
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold">{tours[currentTour][currentStep].title}</h3>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={endTour}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="text-sm text-muted-foreground mb-4">
+                  {tours[currentTour][currentStep].content}
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-muted-foreground">
+                    Step {currentStep + 1} of {tours[currentTour].length}
+                  </div>
+                  <div className="flex space-x-2">
+                    {currentStep > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={goToPreviousStep}
+                      >
+                        Back
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      onClick={goToNextStep}
+                    >
+                      {currentStep < tours[currentTour].length - 1 ? (
+                        <>
+                          Next <ChevronRight className="ml-1 h-3 w-3" />
+                        </>
+                      ) : (
+                        'Done'
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       )}
     </TourContext.Provider>
   );
 }
 
-// Hook to access the tour context
 export function useTour() {
   const context = useContext(TourContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useTour must be used within a TourProvider');
   }
   return context;
 }
 
-// Component to create and trigger a tour
 interface TourProps {
   id: string;
   steps: TourStep[];
@@ -238,19 +212,21 @@ interface TourProps {
 }
 
 export function Tour({ 
-  id, 
-  steps, 
-  autoStart = false, 
+  id,
+  steps,
+  autoStart = false,
   skipIfCompleted = true,
   children 
 }: TourProps) {
   const { registerTour, startTour, completedTours } = useTour();
+  const isMobile = useIsMobile();
   
   useEffect(() => {
     registerTour(id, steps);
     
-    if (autoStart && (!skipIfCompleted || !completedTours.includes(id))) {
-      // Small delay to ensure the DOM elements are ready
+    // Auto-start the tour if enabled and not completed
+    if (autoStart && !(skipIfCompleted && completedTours.includes(id))) {
+      // Small delay to ensure DOM is ready
       const timer = setTimeout(() => {
         startTour(id);
       }, 500);
@@ -262,7 +238,6 @@ export function Tour({
   return <>{children}</>;
 }
 
-// Add a trigger button component
 interface TourTriggerProps {
   tourId: string;
   children: ReactNode;

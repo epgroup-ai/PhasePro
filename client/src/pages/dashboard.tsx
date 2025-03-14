@@ -3,26 +3,77 @@ import DashboardStats from "@/components/dashboard/stats";
 import { DashboardStats as DashboardStatsType } from "@shared/schema";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, HelpCircle } from "lucide-react";
+import { Tour, TourStep, TourTrigger } from "@/components/ui/tooltip-tour";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Dashboard() {
   const { data: stats, isLoading, error } = useQuery<DashboardStatsType>({
     queryKey: ['/api/stats'],
   });
+  const { user } = useAuth();
+  
+  // Define the tour steps for dashboard onboarding
+  const dashboardTourSteps: TourStep[] = [
+    {
+      target: ".dashboard-header",
+      title: "Welcome to your Dashboard",
+      content: "This is your main control center for managing enquiries. Here you'll find quick access to all the features of the system.",
+      placement: "bottom"
+    },
+    {
+      target: ".dashboard-stats",
+      title: "Status Overview",
+      content: "This section shows you key metrics about your enquiries: how many are in progress, processed, and other important statistics.",
+      placement: "bottom"
+    },
+    {
+      target: ".enquiries-table",
+      title: "Recent Enquiries",
+      content: "View your most recent enquiries here. You can click on any of them to see more details or continue processing.",
+      placement: "top"
+    },
+    {
+      target: ".quick-actions",
+      title: "Quick Actions",
+      content: "These shortcuts give you immediate access to common tasks like creating a new enquiry or accessing settings.",
+      placement: "left"
+    },
+    {
+      target: ".new-enquiry-button",
+      title: "Create New Enquiry",
+      content: "Click here to start processing a new customer enquiry. You can upload files and extract specifications automatically.",
+      placement: "bottom"
+    }
+  ];
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      {/* Add the tour component that will automatically trigger for first-time users */}
+      <Tour 
+        id="dashboard-tour" 
+        steps={dashboardTourSteps} 
+        autoStart={user?.lastLogin === null}
+      />
+      
+      <div className="flex justify-between items-center mb-6 dashboard-header">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
           <p className="text-sm text-gray-500">Overview of the enquiry processing system</p>
         </div>
-        <Link href="/new-enquiry">
-          <Button className="flex items-center gap-2">
-            <PlusIcon className="h-4 w-4" />
-            New Enquiry
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <TourTrigger tourId="dashboard-tour">
+            <Button variant="outline" size="icon" className="w-9 h-9" title="Take a tour">
+              <HelpCircle className="h-4 w-4" />
+            </Button>
+          </TourTrigger>
+          <Link href="/new-enquiry">
+            <Button className="flex items-center gap-2 new-enquiry-button">
+              <PlusIcon className="h-4 w-4" />
+              New Enquiry
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {isLoading ? (
@@ -44,11 +95,13 @@ export default function Dashboard() {
           Failed to load dashboard statistics. Please try refreshing the page.
         </div>
       ) : stats ? (
-        <DashboardStats stats={stats} />
+        <div className="dashboard-stats">
+          <DashboardStats stats={stats} />
+        </div>
       ) : null}
 
       <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
-        <div className="bg-white shadow rounded-lg p-6">
+        <div className="bg-white shadow rounded-lg p-6 enquiries-table">
           <h2 className="text-lg font-medium text-gray-900 mb-4">Recent Enquiries</h2>
           <div className="border rounded-md overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
@@ -81,7 +134,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white shadow rounded-lg p-6">
+        <div className="bg-white shadow rounded-lg p-6 quick-actions">
           <h2 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h2>
           <div className="grid grid-cols-2 gap-4">
             <Link href="/new-enquiry">
