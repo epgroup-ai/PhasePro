@@ -7,9 +7,16 @@ import {
   specSheets, type SpecSheet, type InsertSpecSheet,
   type DashboardStats
 } from "@shared/schema";
+import session from "express-session";
+import createMemoryStore from "memorystore";
+
+const MemoryStore = createMemoryStore(session);
 
 // Extend the storage interface with CRUD methods for all schemas
 export interface IStorage {
+  // Session store
+  sessionStore: session.Store;
+
   // User methods
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -51,6 +58,7 @@ export interface IStorage {
 }
 
 export class MemStorage implements IStorage {
+  public sessionStore: session.Store;
   private users: Map<number, User>;
   private files: Map<number, File & { path?: string }>;
   private productSpecs: Map<number, ProductSpecification>;
@@ -63,6 +71,9 @@ export class MemStorage implements IStorage {
   private specSheetCurrentId: number;
 
   constructor() {
+    this.sessionStore = new MemoryStore({
+      checkPeriod: 86400000 // prune expired entries every 24h
+    });
     this.users = new Map();
     this.files = new Map();
     this.productSpecs = new Map();
