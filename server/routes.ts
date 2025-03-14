@@ -13,25 +13,15 @@ import fs from "fs";
 import os from "os";
 import { setupAuth } from "./auth";
 
-// Add type definition for multer
-interface File {
-  fieldname: string;
-  originalname: string;
-  encoding: string;
-  mimetype: string;
-  size: number;
-  destination: string;
-  filename: string;
-  path: string;
-  buffer: Buffer;
-}
+// Import Express.Multer namespace
+import { Multer } from 'multer';
 
 // Add multer file type for use with file uploads
 import { Request as ExpressRequest } from 'express';
 
 // Extend the request interface for multer
 interface MulterRequest extends ExpressRequest {
-  files?: File[] | { [fieldname: string]: File[] };
+  files?: Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] };
 }
 
 // Set up multer for file uploads with temporary storage
@@ -108,7 +98,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const files = Array.isArray(multerReq.files) ? multerReq.files : [];
       const uploadedFiles = await Promise.all(
-        files.map(async (file: File) => {
+        files.map(async (file: Express.Multer.File) => {
           const uploadedFile = await storage.saveFile({
             enquiryId: null,
             filename: file.originalname,
