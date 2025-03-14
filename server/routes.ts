@@ -155,8 +155,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Get file paths from storage
         filePaths = validFiles
-          .filter(file => file.path !== null)
-          .map(file => file.path as string);
+          .filter(file => file.path !== null && file.path !== undefined)
+          .map(file => file.path!);
       }
       
       // Extract data using OpenAI
@@ -167,12 +167,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Save the extracted enquiry
       const validatedData = extractionResultSchema.parse(extractionResult);
       
+      // Format the date strings into JavaScript Date objects
+      const dateReceived = validatedData.enquiry.dateReceived ? new Date(validatedData.enquiry.dateReceived) : new Date();
+      const deadline = validatedData.enquiry.deadline ? new Date(validatedData.enquiry.deadline) : null;
+      
       const enquiry = await storage.createEnquiry({
-        ...validatedData.enquiry,
+        customerName: validatedData.enquiry.customerName,
+        enquiryCode: validatedData.enquiry.enquiryCode,
+        contactPerson: validatedData.enquiry.contactPerson || null,
+        contactEmail: validatedData.enquiry.contactEmail || null,
+        dateReceived,
+        deadline,
         status: 'processed',
         aiConfidence: validatedData.aiConfidence,
         processedAt: new Date(),
         processingTime,
+        specialInstructions: validatedData.enquiry.specialInstructions || null,
+        deliveryRequirements: validatedData.enquiry.deliveryRequirements || null,
       });
 
       // Save the product specifications

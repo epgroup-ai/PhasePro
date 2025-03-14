@@ -109,15 +109,21 @@ function getSampleLabelExtractionResult(): ExtractionResult {
  */
 export async function extractDocumentData(filePaths: string[]): Promise<ExtractionResult> {
   try {
-    // For a real implementation, we would:
-    // 1. Parse the PDFs/DOCXs using a library like pdf.js or docx.js
-    // 2. Extract the text content
-    // 3. Send that content to OpenAI for analysis
+    // For development mode, check if we have an OpenAI key
+    if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === "sk-dummy-key-for-development") {
+      console.log("No valid OpenAI API key found. Using sample data for demo.");
+      
+      // Check if we should use the sample for labels
+      const useLabelsSample = filePaths.some(p => p.includes('sample_enquiry_labels'));
+      
+      if (useLabelsSample) {
+        return getSampleLabelExtractionResult();
+      } else {
+        return getSampleExtractionResult();
+      }
+    }
     
     console.log("Processing files:", filePaths);
-    
-    // Check if we should use the sample for labels
-    const useLabelsSample = filePaths.some(path => path.includes('sample_enquiry_labels'));
     
     // Handle both uploaded files and sample files
     const fileContents = await Promise.all(
@@ -132,7 +138,7 @@ export async function extractDocumentData(filePaths: string[]): Promise<Extracti
           // Otherwise handle as regular upload
           const ext = path.extname(filePath).toLowerCase();
           if (ext === '.pdf' || ext === '.docx' || ext === '.txt') {
-            // Read text content directly
+            // Read text content directly (in production we'd use specific parsers for each file type)
             return fs.readFileSync(filePath, 'utf-8');
           } else {
             return `Contents of ${path.basename(filePath)}`;
@@ -155,16 +161,18 @@ export async function extractDocumentData(filePaths: string[]): Promise<Extracti
     // Combine file contents for analysis
     const combinedContent = fileContents.join('\n\n');
 
+    console.log("Sending content to OpenAI for analysis...");
+    
     // Send the content to OpenAI for analysis
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
       messages: [
         {
           role: "system",
           content: `You are an AI assistant that specializes in extracting structured information from packaging enquiry documents. 
           Extract the following information in JSON format:
           1. Customer name
-          2. Enquiry code/ID (if available)
+          2. Enquiry code/ID (if available, generate one in format ENQ-YYYY-XXXX if missing)
           3. Contact person
           4. Contact email
           5. Date received (in YYYY-MM-DD format)
@@ -173,7 +181,8 @@ export async function extractDocumentData(filePaths: string[]): Promise<Extracti
           8. Special instructions
           9. Delivery requirements
           
-          For each field, provide a confidence score from 0-100.
+          For each product specification, provide a confidence score from 0-100.
+          For the overall extraction, provide an aiConfidence score from 0-100.
           If information is missing or potentially incorrect, flag it with warnings.
           Structure the response as a valid JSON object with "enquiry", "productSpecifications", "aiConfidence", and "warnings" fields.`
         },
@@ -183,6 +192,8 @@ export async function extractDocumentData(filePaths: string[]): Promise<Extracti
         }
       ],
       response_format: { type: "json_object" },
+      temperature: 0.1, // Lower temperature for more deterministic results
+      max_tokens: 2000, // Allow for detailed responses
     });
 
     // Parse the response
@@ -191,26 +202,29 @@ export async function extractDocumentData(filePaths: string[]): Promise<Extracti
       throw new Error("Failed to get content from OpenAI response");
     }
 
+    console.log("Received response from OpenAI");
+    
     // Parse and validate the JSON response
     const result = JSON.parse(content);
-    
-    // If in development environment with dummy key or we're processing samples, use appropriate sample data
-    if (process.env.OPENAI_API_KEY === "sk-dummy-key-for-development" || 
-        filePaths.some(path => path.includes('sample_enquiry_')) || 
-        !process.env.OPENAI_API_KEY) {
-      console.log("Using sample extraction data for demo");
-      if (useLabelsSample) {
-        return getSampleLabelExtractionResult();
-      } else {
-        return getSampleExtractionResult();
-      }
-    }
-    
     return result;
   } catch (error) {
     console.error("Error in OpenAI extraction:", error);
     
+    // Check if this is an API key issue
+    if (error instanceof Error && error.message.includes("API key")) {
+      console.error("Invalid or missing OpenAI API key");
+    }
+    
     // Fall back to sample data if OpenAI fails
-    return getSampleExtractionResult();
+    console.log("Using fallback sample data due to error");
+    
+    // Check if we should use the sample for labels
+    const useLabelsSample = filePaths.some(p => p?.includes('sample_enquiry_labels'));
+    
+    if (useLabelsSample) {
+      return getSampleLabelExtractionResult();
+    } else {
+      return getSampleExtractionResult();
+    }
   }
 }
