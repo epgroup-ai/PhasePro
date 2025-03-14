@@ -12,6 +12,8 @@ import path from "path";
 import fs from "fs";
 import os from "os";
 import { setupAuth } from "./auth";
+// Import hashPassword function for test routes
+import { hashPassword } from "./auth";
 
 // Import Express.Multer namespace
 import { Multer } from 'multer';
