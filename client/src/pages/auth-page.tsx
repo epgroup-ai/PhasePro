@@ -50,9 +50,34 @@ export default function AuthPage() {
   });
 
   const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
+    console.log("Login form submitted:", values);
+    console.log("Current cookies:", document.cookie);
+    
     try {
-      await loginMutation.mutateAsync(values);
-      console.log("Login mutation completed successfully");
+      console.log("Calling login mutation...");
+      const user = await loginMutation.mutateAsync(values);
+      console.log("Login mutation completed successfully with user:", user);
+      console.log("Current cookies after login:", document.cookie);
+      
+      // Test if we can access /api/user after login
+      try {
+        console.log("Testing API user endpoint directly...");
+        const userCheckResponse = await fetch('/api/user', { 
+          credentials: 'include',
+          headers: { 'Cache-Control': 'no-cache' }
+        });
+        
+        if (userCheckResponse.ok) {
+          const userData = await userCheckResponse.json();
+          console.log("API user endpoint returned:", userData);
+        } else {
+          console.error("API user endpoint failed with status:", userCheckResponse.status);
+        }
+      } catch (apiError) {
+        console.error("Error checking user API:", apiError);
+      }
+      
+      console.log("Redirecting to dashboard...");
       // Force navigation immediately after successful login
       window.location.href = '/';
     } catch (error) {

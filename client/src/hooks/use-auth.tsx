@@ -55,13 +55,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
+      console.log("Login mutation started for:", credentials.username);
+      console.log("Document cookies before login:", document.cookie);
+      
       const res = await apiRequest("POST", "/api/login", credentials);
-      return await res.json();
+      console.log("Login response status:", res.status);
+      console.log("Login response headers:", 
+        Array.from(res.headers.entries()).map(([key, value]) => `${key}: ${value}`).join('\n')
+      );
+      console.log("Document cookies after login:", document.cookie);
+      
+      const userData = await res.json();
+      return userData;
     },
     onSuccess: (user: User) => {
       console.log("Login success - User data:", user);
       queryClient.setQueryData(['/api/user'], user);
       console.log("Cache updated with user data");
+      console.log("Document cookies after cache update:", document.cookie);
+      
+      // Debug: Test a direct fetch to /api/user to verify session
+      fetch('/api/user', { credentials: 'include' })
+        .then(res => {
+          console.log("Verification fetch status:", res.status);
+          return res.json();
+        })
+        .then(data => console.log("Verification fetch data:", data))
+        .catch(err => console.error("Verification fetch error:", err));
+      
       toast({
         title: "Login successful",
         description: `Welcome back, ${user.fullName || user.username}!`,

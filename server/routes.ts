@@ -56,9 +56,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication
   setupAuth(app);
   
-  // Test route to verify API functionality (no auth required)
+  // Test routes to verify API functionality (no auth required)
   app.get('/api/test', (req: Request, res: Response) => {
-    res.json({ success: true, message: 'API is working' });
+    console.log("GET /api/test - Testing API connection");
+    res.json({ 
+      success: true, 
+      message: 'API is working',
+      timestamp: new Date().toISOString(),
+      cookies: req.cookies,
+      sessionID: req.sessionID,
+      isAuthenticated: req.isAuthenticated()
+    });
+  });
+  
+  // Create a test user route for debugging
+  app.get('/api/test/create-user', async (req: Request, res: Response) => {
+    try {
+      console.log("GET /api/test/create-user - Creating test user");
+      
+      // Check if test user already exists
+      const existingUser = await storage.getUserByUsername("debuguser");
+      
+      if (existingUser) {
+        console.log("Test user already exists");
+        return res.json({ 
+          success: true, 
+          message: 'Test user already exists',
+          user: {
+            id: existingUser.id,
+            username: existingUser.username,
+          }
+        });
+      }
+      
+      // Create a new test user if one doesn't exist
+      const user = await storage.createUser({
+        username: "debuguser",
+        password: await hashPassword("debugpass"),
+        email: "debug@example.com",
+        fullName: "Debug User",
+        role: "user"
+      });
+      
+      console.log("Test user created:", user.id);
+      
+      res.json({ 
+        success: true, 
+        message: 'Test user created',
+        user: {
+          id: user.id,
+          username: user.username,
+        }
+      });
+    } catch (err) {
+      console.error("Error creating test user:", err);
+      res.status(500).json({ success: false, message: 'Error creating test user' });
+    }
+  });
+  
+  // Direct login test route (bypasses frontend)
+  app.get('/api/test/login', async (req: Request, res: Response) => {
+    try {
+      console.log("GET /api/test/login - Direct login test");
+      req.login({ id: 1 } as any, (err) => {
+        if (err) {
+          console.error("Login error:", err);
+          return res.status(500).json({ success: false, message: 'Login error', error: err.message });
+        }
+        console.log("Test login successful - User authenticated:", req.isAuthenticated());
+        return res.json({ 
+          success: true, 
+          message: 'Test login successful',
+          isAuthenticated: req.isAuthenticated(),
+          sessionID: req.sessionID
+        });
+      });
+    } catch (err) {
+      console.error("Error in test login:", err);
+      res.status(500).json({ success: false, message: 'Error in test login' });
+    }
   });
 
   // Authentication middleware for protected routes
