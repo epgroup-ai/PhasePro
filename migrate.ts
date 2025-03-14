@@ -65,7 +65,10 @@ async function main() {
         special_instructions TEXT,
         delivery_requirements TEXT,
         assigned_to INTEGER,
-        processing_time INTEGER
+        processing_time INTEGER,
+        ai_confidence INTEGER,
+        processed_at TIMESTAMP,
+        processed_by TEXT
       );
 
       CREATE TABLE IF NOT EXISTS spec_sheets (
