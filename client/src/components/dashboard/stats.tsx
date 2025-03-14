@@ -9,25 +9,25 @@ export default function DashboardStats({ stats }: DashboardStatsProps) {
   const statItems = [
     {
       title: "New Enquiries",
-      value: stats.newEnquiries.toString(),
+      value: (stats.newEnquiries ?? 0).toString(),
       icon: <MailIcon className="text-primary-600" />,
       bgColor: "bg-primary-100",
     },
     {
       title: "Processed Today",
-      value: stats.processedToday.toString(),
+      value: (stats.processedToday ?? 0).toString(),
       icon: <CheckCircleIcon className="text-success" />,
       bgColor: "bg-green-100",
     },
     {
       title: "Pending Review",
-      value: stats.pendingReview.toString(),
+      value: (stats.pendingReview ?? 0).toString(),
       icon: <ClockIcon className="text-warning" />,
       bgColor: "bg-yellow-100",
     },
     {
       title: "Avg. Processing Time",
-      value: stats.avgProcessingTime,
+      value: stats.avgProcessingTime ?? "0 sec",
       icon: <GaugeIcon className="text-primary-600" />,
       bgColor: "bg-blue-100",
     },

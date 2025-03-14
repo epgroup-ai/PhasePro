@@ -303,13 +303,13 @@ export class MemStorage implements IStorage {
     const processedEnquiries = enquiries.filter(e => e.processingTime);
     const totalTime = processedEnquiries.reduce((sum, e) => sum + (e.processingTime || 0), 0);
     const avgTime = processedEnquiries.length ? (totalTime / processedEnquiries.length / 1000) : 0;
-    const avgTimeFormatted = `${avgTime.toFixed(1)} min`;
+    const avgProcessingTime = `${avgTime.toFixed(1)} sec`;
     
     return {
       newEnquiries,
       processedToday,
       pendingReview,
-      avgProcessingTime: avgTimeFormatted,
+      avgProcessingTime,
     };
   }
 }
@@ -562,33 +562,38 @@ export class DatabaseStorage implements IStorage {
 
   // Dashboard Stats
   async getDashboardStats(): Promise<DashboardStats> {
-    // Total enquiries
+    // Get all enquiries
     const allEnquiries = await this.db.select().from(enquiries);
-    const totalEnquiries = allEnquiries.length;
     
-    // Processed enquiries
-    const processedEnquiries = allEnquiries.filter(e => e.status === 'processed').length;
+    // New enquiries
+    const newEnquiries = allEnquiries.filter(e => e.status === 'new').length;
     
-    // Pending enquiries
-    const pendingEnquiries = allEnquiries.filter(e => e.status === 'pending').length;
+    // Today's date at midnight
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     
-    // Average processing time (in seconds)
-    const processedWithTime = allEnquiries.filter(e => e.status === 'processed' && e.processingTime != null);
-    const avgProcessingTime = processedWithTime.length > 0
+    // Processed today
+    const processedToday = allEnquiries.filter(e => 
+      e.processedAt && new Date(e.processedAt) >= today
+    ).length;
+    
+    // Pending review
+    const pendingReview = allEnquiries.filter(e => e.status === 'processed').length;
+    
+    // Average processing time
+    const processedWithTime = allEnquiries.filter(e => e.processingTime != null);
+    const avgTimeInMs = processedWithTime.length > 0
       ? processedWithTime.reduce((acc, curr) => acc + (curr.processingTime || 0), 0) / processedWithTime.length
       : 0;
     
-    // Recent enquiries (last 5)
-    const recentEnquiries = [...allEnquiries]
-      .sort((a, b) => new Date(b.dateReceived).getTime() - new Date(a.dateReceived).getTime())
-      .slice(0, 5);
+    // Format average time as string (convert ms to seconds)
+    const avgProcessingTime = `${(avgTimeInMs / 1000).toFixed(1)} sec`;
     
     return {
-      totalEnquiries,
-      processedEnquiries,
-      pendingEnquiries,
-      avgProcessingTime,
-      recentEnquiries
+      newEnquiries,
+      processedToday,
+      pendingReview,
+      avgProcessingTime
     };
   }
 }
