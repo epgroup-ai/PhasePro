@@ -1,4 +1,5 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Response } from "express";
+import { Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
@@ -24,13 +25,12 @@ interface File {
   buffer: Buffer;
 }
 
-// Add type augmentation for Express.Request
-declare global {
-  namespace Express {
-    interface Request {
-      files?: File[] | { [fieldname: string]: File[] };
-    }
-  }
+// Add multer file type for use with file uploads
+import { Request as ExpressRequest } from 'express';
+
+// Extend the request interface for multer
+interface MulterRequest extends ExpressRequest {
+  files?: File[] | { [fieldname: string]: File[] };
 }
 
 // Set up multer for file uploads with temporary storage
@@ -85,15 +85,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // File upload endpoint
-  app.post('/api/upload', upload.array('files', 5), async (req: Request, res: Response) => {
+  app.post('/api/upload', upload.array('files', 5), async (req, res: Response) => {
     try {
-      if (!req.files || (Array.isArray(req.files) && req.files.length === 0)) {
+      // Cast req to any to bypass TypeScript limitations with multer
+      const multerReq = req as any;
+      
+      if (!multerReq.files || (Array.isArray(multerReq.files) && multerReq.files.length === 0)) {
         return res.status(400).json({ message: 'No files uploaded' });
       }
 
-      const files = Array.isArray(req.files) ? req.files : [];
+      const files = Array.isArray(multerReq.files) ? multerReq.files : [];
       const uploadedFiles = await Promise.all(
-        files.map(async (file) => {
+        files.map(async (file: File) => {
           const uploadedFile = await storage.saveFile({
             enquiryId: null,
             filename: file.originalname,
@@ -155,8 +158,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Get file paths from storage
         filePaths = validFiles
-          .filter(file => file.path !== null && file.path !== undefined)
-          .map(file => file.path!);
+          .filter(file => file && typeof file.path === 'string' && file.path.length > 0)
+          .map(file => file.path as string);
       }
       
       // Extract data using OpenAI
@@ -199,13 +202,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update files to associate with the enquiry (if not using sample files)
       if (!useSampleFiles && fileIds.length > 0) {
         const files = await Promise.all(fileIds.map(id => storage.getFile(id)));
-        const validFiles = files.filter(Boolean);
+        const validFiles = files.filter((file): file is NonNullable<typeof file> => file !== undefined && file !== null);
         
-        await Promise.all(
-          validFiles.map(file =>
-            storage.updateFile(file.id, { enquiryId: enquiry.id })
-          )
-        );
+        if (validFiles.length > 0) {
+          await Promise.all(
+            validFiles.map(file => storage.updateFile(file.id, { enquiryId: enquiry.id }))
+          );
+        }
       }
 
       res.status(200).json({
