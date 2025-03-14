@@ -1,9 +1,9 @@
 import { ReactNode, createContext, useContext, useEffect, useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
-import { useIsMobile } from "@/hooks/use-media-query";
+import { useIsMobile } from "../../hooks/use-media-query";
 import { Button } from "./button";
 import { ChevronRight, X } from "lucide-react";
-import { useLocalStorage } from "@/hooks/use-local-storage";
+import { useLocalStorage } from "../../hooks/use-local-storage";
 
 export interface TourStep {
   target: string;
@@ -87,7 +87,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
   
   const endTour = () => {
     if (currentTour) {
-      setCompletedTours(prev => {
+      setCompletedTours((prev: string[]) => {
         if (!prev.includes(currentTour)) {
           return [...prev, currentTour];
         }
@@ -102,7 +102,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
     
     const steps = tours[currentTour];
     if (currentStep < steps.length - 1) {
-      setCurrentStep(prev => prev + 1);
+      setCurrentStep((prev: number) => prev + 1);
     } else {
       endTour();
     }
@@ -110,7 +110,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
   
   const goToPreviousStep = () => {
     if (!currentTour || currentStep === 0) return;
-    setCurrentStep(prev => prev - 1);
+    setCurrentStep((prev: number) => prev - 1);
   };
   
   const resetTours = () => {
