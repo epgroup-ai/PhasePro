@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route, useLocation, Redirect } from "wouter";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import NewEnquiry from "@/pages/new-enquiry";
@@ -38,14 +38,7 @@ function ProtectedRoute({
   if (!user) {
     return (
       <Route path={path}>
-        <div className="flex items-center justify-center min-h-screen">
-          <Route path="*">
-            {() => {
-              window.location.href = "/auth";
-              return null;
-            }}
-          </Route>
-        </div>
+        <Redirect to="/auth" />
       </Route>
     );
   }
@@ -81,10 +74,7 @@ function AuthenticatedRoutes() {
               <AuthPage />
             </Route>
             <Route path="*">
-              {() => {
-                window.location.href = "/auth";
-                return null;
-              }}
+              <Redirect to="/auth" />
             </Route>
           </Switch>
         </main>
