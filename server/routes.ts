@@ -4,7 +4,16 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
 import { extractDocumentData } from "./lib/openai";
-import { insertEnquirySchema, insertProductSpecificationSchema, extractionResultSchema } from "@shared/schema";
+import { parseInvoiceDocument } from "./lib/invoice-parser";
+import { getCategoryManager } from "./lib/category-mapping";
+import { 
+  insertEnquirySchema, 
+  insertProductSpecificationSchema, 
+  extractionResultSchema,
+  insertInvoiceSchema,
+  insertInvoiceItemSchema,
+  parsedInvoiceSchema
+} from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
@@ -433,6 +442,205 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.status(204).end();
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
+
+  // ============== INVOICE ROUTES ==============
+
+  // Upload and process an invoice
+  app.post('/api/invoices/upload', requireAuth, upload.single('invoice'), async (req: Request, res: Response) => {
+    try {
+      // Cast req to any to bypass TypeScript limitations with multer
+      const multerReq = req as any;
+      
+      if (!multerReq.file) {
+        return res.status(400).json({ message: 'No invoice file uploaded' });
+      }
+
+      const file = multerReq.file;
+      
+      // Store the file in the database
+      const uploadedFile = await storage.saveFile({
+        enquiryId: null,
+        filename: file.originalname,
+        contentType: file.mimetype,
+        size: file.size,
+        path: file.path
+      });
+
+      // Process the invoice with AI
+      const startTime = Date.now();
+      const parsedInvoice = await parseInvoiceDocument(file.path);
+      const processingTime = Date.now() - startTime;
+      
+      // Validate the parsed invoice
+      const validatedInvoice = parsedInvoiceSchema.parse(parsedInvoice);
+      
+      // Create invoice record
+      const invoiceDate = new Date(validatedInvoice.meta.invoiceDate);
+      const dueDate = validatedInvoice.meta.dueDate ? new Date(validatedInvoice.meta.dueDate) : null;
+      
+      // Check if the invoice already exists
+      const existingInvoice = await storage.getInvoiceByNumber(validatedInvoice.meta.invoiceNumber);
+      
+      if (existingInvoice) {
+        return res.status(400).json({ 
+          message: 'Invoice already exists',
+          invoice: existingInvoice
+        });
+      }
+
+      // Store the assignee information
+      let assignedToId = null;
+      let assignedToName = null;
+      let assignedToDepartment = null;
+
+      if (validatedInvoice.assignedTo) {
+        assignedToId = validatedInvoice.assignedTo.id;
+        assignedToName = validatedInvoice.assignedTo.name;
+        assignedToDepartment = validatedInvoice.assignedTo.department;
+      }
+
+      // Create new invoice record
+      const invoice = await storage.createInvoice({
+        invoiceNumber: validatedInvoice.meta.invoiceNumber,
+        invoiceDate,
+        supplierName: validatedInvoice.meta.supplierName,
+        supplierContact: validatedInvoice.meta.supplierContact || null,
+        customerName: validatedInvoice.meta.customerName,
+        customerReference: validatedInvoice.meta.customerReference || null,
+        totalAmount: validatedInvoice.meta.totalAmount,
+        currency: validatedInvoice.meta.currency,
+        paymentTerms: validatedInvoice.meta.paymentTerms || null,
+        dueDate,
+        taxAmount: validatedInvoice.meta.taxAmount || null,
+        status: validatedInvoice.status,
+        assignedTo: assignedToId,
+        assignedToName: assignedToName,
+        assignedToDepartment: assignedToDepartment,
+        uploadedBy: req.user?.id || null,
+        filePath: file.path,
+        processingTime,
+        aiConfidence: validatedInvoice.confidence,
+        rawText: validatedInvoice.rawText || null
+      });
+
+      // Create invoice items
+      const invoiceItems = await Promise.all(
+        validatedInvoice.items.map(async (item) => {
+          let categoryManagerId = null;
+          let categoryManagerName = null;
+          let categoryManagerDepartment = null;
+
+          if (item.categoryManager) {
+            categoryManagerId = item.categoryManager.id;
+            categoryManagerName = item.categoryManager.name;
+            categoryManagerDepartment = item.categoryManager.department;
+          }
+
+          return storage.createInvoiceItem({
+            invoiceId: invoice.id,
+            sku: item.sku,
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            totalPrice: item.totalPrice,
+            category: item.category || null,
+            categoryManagerId,
+            categoryManagerName,
+            categoryManagerDepartment
+          });
+        })
+      );
+
+      res.status(201).json({
+        invoice,
+        items: invoiceItems,
+        processingTime: `${(processingTime / 1000).toFixed(1)} seconds`,
+        file: uploadedFile
+      });
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
+
+  // Get all invoices
+  app.get('/api/invoices', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const invoices = await storage.getAllInvoices();
+      res.json(invoices);
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
+
+  // Get invoice by ID with items
+  app.get('/api/invoices/:id', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const invoice = await storage.getInvoice(id);
+      
+      if (!invoice) {
+        return res.status(404).json({ message: 'Invoice not found' });
+      }
+      
+      const items = await storage.getInvoiceItems(id);
+      
+      res.json({
+        invoice,
+        items
+      });
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
+
+  // Update invoice status
+  app.patch('/api/invoices/:id', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const invoice = await storage.getInvoice(id);
+      
+      if (!invoice) {
+        return res.status(404).json({ message: 'Invoice not found' });
+      }
+      
+      const updateData = insertInvoiceSchema.partial().parse(req.body);
+      const updatedInvoice = await storage.updateInvoice(id, updateData);
+      
+      res.json(updatedInvoice);
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
+
+  // Get invoices assigned to a category manager
+  app.get('/api/invoices/assigned/:managerId', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const managerId = req.params.managerId;
+      const invoices = await storage.getInvoicesByAssignee(managerId);
+      res.json(invoices);
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
+
+  // Update an invoice item
+  app.patch('/api/invoice-items/:id', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const items = await storage.getInvoiceItems(id);
+      
+      if (items.length === 0) {
+        return res.status(404).json({ message: 'Invoice item not found' });
+      }
+      
+      const updateData = insertInvoiceItemSchema.partial().parse(req.body);
+      const updatedItem = await storage.updateInvoiceItem(id, updateData);
+      
+      res.json(updatedItem);
     } catch (err) {
       handleError(err, res);
     }

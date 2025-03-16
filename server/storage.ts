@@ -5,6 +5,8 @@ import {
   productSpecifications, type ProductSpecification, type InsertProductSpecification,
   enquiries, type Enquiry, type InsertEnquiry,
   specSheets, type SpecSheet, type InsertSpecSheet,
+  invoices, type Invoice, type InsertInvoice,
+  invoiceItems, type InvoiceItem, type InsertInvoiceItem,
   type DashboardStats
 } from "@shared/schema";
 import session from "express-session";
@@ -79,11 +81,15 @@ export class MemStorage implements IStorage {
   private productSpecs: Map<number, ProductSpecification>;
   private enquiries: Map<number, Enquiry>;
   private specSheets: Map<number, SpecSheet>;
+  private invoices: Map<number, Invoice>;
+  private invoiceItems: Map<number, InvoiceItem>;
   private userCurrentId: number;
   private fileCurrentId: number;
   private productSpecCurrentId: number;
   private enquiryCurrentId: number;
   private specSheetCurrentId: number;
+  private invoiceCurrentId: number;
+  private invoiceItemCurrentId: number;
 
   constructor() {
     this.sessionStore = new MemoryStore({
@@ -94,11 +100,15 @@ export class MemStorage implements IStorage {
     this.productSpecs = new Map();
     this.enquiries = new Map();
     this.specSheets = new Map();
+    this.invoices = new Map();
+    this.invoiceItems = new Map();
     this.userCurrentId = 1;
     this.fileCurrentId = 1;
     this.productSpecCurrentId = 1;
     this.enquiryCurrentId = 1;
     this.specSheetCurrentId = 1;
+    this.invoiceCurrentId = 1;
+    this.invoiceItemCurrentId = 1;
 
     // Add a test user (factory worker)
     this.createUser({
