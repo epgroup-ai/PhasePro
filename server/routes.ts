@@ -279,6 +279,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Generate a unique enquiry code in case the extracted one already exists
+      const generateUniqueEnquiryCode = async () => {
+        const currentYear = new Date().getFullYear();
+        const baseCode = `ENQ-${currentYear}-`;
+        let counter = 1;
+        let uniqueCode;
+        let isUnique = false;
+        
+        while (!isUnique) {
+          // Format the counter with leading zeros (4 digits)
+          const formattedCounter = String(counter).padStart(4, '0');
+          uniqueCode = `${baseCode}${formattedCounter}`;
+          
+          // Check if this code already exists
+          const existingEnquiry = await storage.getEnquiryByCode(uniqueCode);
+          if (!existingEnquiry) {
+            isUnique = true;
+          } else {
+            counter++;
+          }
+        }
+        
+        return uniqueCode;
+      };
+      
       let enquiry;
       let validatedData;
       
@@ -289,6 +314,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Format the date strings into JavaScript Date objects
         const dateReceived = validatedData.enquiry.dateReceived ? new Date(validatedData.enquiry.dateReceived) : new Date();
         const deadline = validatedData.enquiry.deadline ? new Date(validatedData.enquiry.deadline) : null;
+        
+        // Check if the enquiry code already exists
+        if (validatedData.enquiry.enquiryCode) {
+          const existingEnquiry = await storage.getEnquiryByCode(validatedData.enquiry.enquiryCode);
+          if (existingEnquiry) {
+            console.log(`Enquiry with code ${validatedData.enquiry.enquiryCode} already exists, generating new code`);
+            validatedData.enquiry.enquiryCode = await generateUniqueEnquiryCode();
+          }
+        } else {
+          // No code provided, generate a new one
+          validatedData.enquiry.enquiryCode = await generateUniqueEnquiryCode();
+        }
         
         enquiry = await storage.createEnquiry({
           customerName: validatedData.enquiry.customerName,
@@ -307,10 +344,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (validationError) {
         console.error("Validation error:", validationError);
         
+        // Generate a unique enquiry code for the fallback case
+        const fallbackEnquiryCode = await generateUniqueEnquiryCode();
+        
         // Create with fallback values for required fields that failed validation
         enquiry = await storage.createEnquiry({
           customerName: extractionResult.enquiry?.customerName || "Unknown Customer",
-          enquiryCode: extractionResult.enquiry?.enquiryCode || `ENQ-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+          enquiryCode: fallbackEnquiryCode,
           contactPerson: extractionResult.enquiry?.contactPerson || null,
           contactEmail: null, // Always set to null if validation failed
           dateReceived: new Date(),
