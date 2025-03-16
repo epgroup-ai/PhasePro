@@ -25,7 +25,9 @@ export default function InvoiceUpload() {
 
   const uploadMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const response = await apiRequest("POST", "/api/invoices/upload", data);
+      const response = await apiRequest("POST", "/api/invoices/upload", data, {
+        formData: true
+      });
       return await response.json();
     },
     onSuccess: (data) => {
