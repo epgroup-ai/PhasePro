@@ -191,3 +191,86 @@ export function EnquiryProcessingAnimation() {
     </div>
   );
 }
+
+export function InvoiceProcessingAnimation() {
+  const [currentStep, setCurrentStep] = React.useState(0);
+  const [progress, setProgress] = React.useState(0);
+  const steps = [
+    "Scanning invoice document",
+    "Extracting line items",
+    "Mapping to categories",
+    "Assigning to managers",
+    "Finalizing processing"
+  ];
+
+  React.useEffect(() => {
+    // Simulate progress through steps for demo purposes
+    const stepInterval = setInterval(() => {
+      setCurrentStep(prev => {
+        if (prev >= steps.length - 1) {
+          clearInterval(stepInterval);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, 1500);
+    
+    // Simulate progress bar movement independently for smoother animation
+    const progressInterval = setInterval(() => {
+      setProgress(prev => {
+        // Calculate target progress based on current step (each step is worth 20%)
+        const targetProgress = (currentStep / (steps.length - 1)) * 100;
+        
+        // If we're close to the target, move exactly to it
+        if (prev >= targetProgress - 2) {
+          return targetProgress;
+        }
+        
+        // Otherwise move smoothly towards it
+        return prev + 0.5;
+      });
+    }, 50);
+    
+    return () => {
+      clearInterval(stepInterval);
+      clearInterval(progressInterval);
+    };
+  }, [currentStep, steps.length]);
+
+  return (
+    <div className="bg-white p-6 rounded-lg shadow-sm border">
+      <div className="mb-4 flex items-center">
+        <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
+        <h3 className="text-lg font-medium">Processing Invoice</h3>
+        <div className="ml-auto text-sm text-gray-500">{Math.round(progress)}%</div>
+      </div>
+      
+      <div className="space-y-1 mb-4">
+        {steps.map((step, index) => (
+          <ProcessingStep 
+            key={step}
+            step={step}
+            currentStep={index === currentStep}
+            completed={index < currentStep}
+          />
+        ))}
+      </div>
+      
+      <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+        <div 
+          className="h-full bg-primary rounded-full transition-all duration-150 ease-in-out" 
+          style={{ width: `${progress}%` }}
+        ></div>
+      </div>
+      <div className="mt-2 text-xs text-gray-500 text-center">
+        This may take up to 30 seconds
+      </div>
+      
+      <div className="mt-4 flex justify-center space-x-1">
+        <div className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }}></div>
+        <div className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }}></div>
+        <div className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }}></div>
+      </div>
+    </div>
+  );
+}
