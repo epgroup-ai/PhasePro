@@ -312,6 +312,81 @@ export class MemStorage implements IStorage {
     );
   }
 
+  // Invoice methods
+  async createInvoice(insertInvoice: InsertInvoice): Promise<Invoice> {
+    const id = this.invoiceCurrentId++;
+    const invoice: Invoice = { 
+      ...insertInvoice, 
+      id, 
+      uploadedAt: new Date(),
+      processedAt: insertInvoice.processedAt || null 
+    };
+    this.invoices.set(id, invoice);
+    return invoice;
+  }
+
+  async getInvoice(id: number): Promise<Invoice | undefined> {
+    return this.invoices.get(id);
+  }
+
+  async getInvoiceByNumber(invoiceNumber: string): Promise<Invoice | undefined> {
+    return Array.from(this.invoices.values()).find(
+      (invoice) => invoice.invoiceNumber === invoiceNumber,
+    );
+  }
+
+  async getAllInvoices(): Promise<Invoice[]> {
+    return Array.from(this.invoices.values());
+  }
+
+  async getInvoicesByAssignee(assigneeId: string): Promise<Invoice[]> {
+    return Array.from(this.invoices.values()).filter(
+      (invoice) => invoice.assignedTo === assigneeId,
+    );
+  }
+
+  async updateInvoice(id: number, data: Partial<InsertInvoice>): Promise<Invoice> {
+    const invoice = this.invoices.get(id);
+    if (!invoice) {
+      throw new Error(`Invoice with ID ${id} not found`);
+    }
+    const updatedInvoice = { ...invoice, ...data };
+    this.invoices.set(id, updatedInvoice);
+    return updatedInvoice;
+  }
+
+  async deleteInvoice(id: number): Promise<void> {
+    this.invoices.delete(id);
+  }
+
+  // Invoice Item methods
+  async createInvoiceItem(insertItem: InsertInvoiceItem): Promise<InvoiceItem> {
+    const id = this.invoiceItemCurrentId++;
+    const item: InvoiceItem = { ...insertItem, id };
+    this.invoiceItems.set(id, item);
+    return item;
+  }
+
+  async getInvoiceItems(invoiceId: number): Promise<InvoiceItem[]> {
+    return Array.from(this.invoiceItems.values()).filter(
+      (item) => item.invoiceId === invoiceId,
+    );
+  }
+
+  async updateInvoiceItem(id: number, data: Partial<InsertInvoiceItem>): Promise<InvoiceItem> {
+    const item = this.invoiceItems.get(id);
+    if (!item) {
+      throw new Error(`Invoice item with ID ${id} not found`);
+    }
+    const updatedItem = { ...item, ...data };
+    this.invoiceItems.set(id, updatedItem);
+    return updatedItem;
+  }
+
+  async deleteInvoiceItem(id: number): Promise<void> {
+    this.invoiceItems.delete(id);
+  }
+
   // Dashboard Stats
   async getDashboardStats(): Promise<DashboardStats> {
     const enquiries = Array.from(this.enquiries.values());
@@ -715,6 +790,7 @@ export class DatabaseStorage implements IStorage {
 
 // Import drizzle-orm functions
 import { eq } from "drizzle-orm";
+import { Json } from "drizzle-orm/pg-core";
 
 // Use PostgreSQL storage instead of memory storage
 export const storage = new DatabaseStorage();
