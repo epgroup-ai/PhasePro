@@ -6,6 +6,7 @@ import multer from "multer";
 import { extractDocumentData } from "./lib/openai";
 import { parseInvoiceDocument } from "./lib/invoice-parser";
 import { getCategoryManager } from "./lib/category-mapping";
+import CollaborationServer from "./lib/websocket";
 import { 
   insertEnquirySchema, 
   insertProductSpecificationSchema, 
@@ -647,5 +648,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  
+  // Initialize WebSocket server for real-time collaboration
+  const collaborationServer = new CollaborationServer(httpServer);
+  
+  // Add WebSocket routes for spec sheet collaboration
+  app.get('/api/collaboration/spec/:id', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const specSheetId = parseInt(req.params.id);
+      const specSheet = await storage.getSpecSheet(specSheetId);
+      
+      if (!specSheet) {
+        return res.status(404).json({ message: 'Spec sheet not found' });
+      }
+      
+      res.json({
+        specSheet,
+        collaborationEnabled: true
+      });
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
+  
   return httpServer;
 }
