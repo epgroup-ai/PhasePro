@@ -315,12 +315,50 @@ export class MemStorage implements IStorage {
   // Invoice methods
   async createInvoice(insertInvoice: InsertInvoice): Promise<Invoice> {
     const id = this.invoiceCurrentId++;
+    
+    // Set default values for nullable fields
+    const status = insertInvoice.status || 'pending';
+    const currency = insertInvoice.currency || 'GBP';
+    const supplierContact = insertInvoice.supplierContact || null;
+    const customerReference = insertInvoice.customerReference || null;
+    const paymentTerms = insertInvoice.paymentTerms || null;
+    const dueDate = insertInvoice.dueDate || null;
+    const taxAmount = insertInvoice.taxAmount || null;
+    const uploadedBy = insertInvoice.uploadedBy || null;
+    const assignedTo = insertInvoice.assignedTo || null;
+    const assignedToName = insertInvoice.assignedToName || null;
+    const assignedToDepartment = insertInvoice.assignedToDepartment || null;
+    const aiConfidence = insertInvoice.aiConfidence || null;
+    const rawText = insertInvoice.rawText || null;
+    const filePath = insertInvoice.filePath || null;
+    const processingTime = insertInvoice.processingTime || null;
+    
     const invoice: Invoice = { 
-      ...insertInvoice, 
-      id, 
+      id,
+      invoiceNumber: insertInvoice.invoiceNumber,
+      invoiceDate: insertInvoice.invoiceDate,
+      supplierName: insertInvoice.supplierName,
+      customerName: insertInvoice.customerName,
+      totalAmount: insertInvoice.totalAmount,
+      status,
+      currency,
       uploadedAt: new Date(),
-      processedAt: insertInvoice.processedAt || null 
+      supplierContact,
+      customerReference,
+      paymentTerms,
+      dueDate,
+      taxAmount,
+      uploadedBy,
+      assignedTo,
+      assignedToName,
+      assignedToDepartment,
+      processedAt: null,
+      processingTime,
+      aiConfidence,
+      rawText,
+      filePath
     };
+    
     this.invoices.set(id, invoice);
     return invoice;
   }
@@ -362,7 +400,27 @@ export class MemStorage implements IStorage {
   // Invoice Item methods
   async createInvoiceItem(insertItem: InsertInvoiceItem): Promise<InvoiceItem> {
     const id = this.invoiceItemCurrentId++;
-    const item: InvoiceItem = { ...insertItem, id };
+    
+    // Set default values for nullable fields
+    const category = insertItem.category || null;
+    const categoryManagerId = insertItem.categoryManagerId || null;
+    const categoryManagerName = insertItem.categoryManagerName || null;
+    const categoryManagerDepartment = insertItem.categoryManagerDepartment || null;
+    
+    const item: InvoiceItem = { 
+      id,
+      invoiceId: insertItem.invoiceId,
+      sku: insertItem.sku,
+      description: insertItem.description,
+      quantity: insertItem.quantity,
+      unitPrice: insertItem.unitPrice,
+      totalPrice: insertItem.totalPrice,
+      category,
+      categoryManagerId,
+      categoryManagerName,
+      categoryManagerDepartment
+    };
+    
     this.invoiceItems.set(id, item);
     return item;
   }
@@ -393,15 +451,15 @@ export class MemStorage implements IStorage {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    const newEnquiries = enquiries.filter(e => e.status === 'new').length;
-    const processedToday = enquiries.filter(e => 
+    const newEnquiries = enquiries.filter((e: Enquiry) => e.status === 'new').length;
+    const processedToday = enquiries.filter((e: Enquiry) => 
       e.processedAt && new Date(e.processedAt) >= today
     ).length;
-    const pendingReview = enquiries.filter(e => e.status === 'processed').length;
+    const pendingReview = enquiries.filter((e: Enquiry) => e.status === 'processed').length;
     
     // Calculate average processing time
-    const processedEnquiries = enquiries.filter(e => e.processingTime);
-    const totalTime = processedEnquiries.reduce((sum, e) => sum + (e.processingTime || 0), 0);
+    const processedEnquiries = enquiries.filter((e: Enquiry) => e.processingTime);
+    const totalTime = processedEnquiries.reduce((sum: number, e: Enquiry) => sum + (e.processingTime || 0), 0);
     const avgTime = processedEnquiries.length ? (totalTime / processedEnquiries.length / 1000) : 0;
     const avgProcessingTime = `${avgTime.toFixed(1)} sec`;
     
@@ -756,24 +814,24 @@ export class DatabaseStorage implements IStorage {
     const allEnquiries = await this.db.select().from(enquiries);
     
     // New enquiries
-    const newEnquiries = allEnquiries.filter(e => e.status === 'new').length;
+    const newEnquiries = allEnquiries.filter((e: Enquiry) => e.status === 'new').length;
     
     // Today's date at midnight
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
     // Processed today
-    const processedToday = allEnquiries.filter(e => 
+    const processedToday = allEnquiries.filter((e: Enquiry) => 
       e.processedAt && new Date(e.processedAt) >= today
     ).length;
     
     // Pending review
-    const pendingReview = allEnquiries.filter(e => e.status === 'processed').length;
+    const pendingReview = allEnquiries.filter((e: Enquiry) => e.status === 'processed').length;
     
     // Average processing time
-    const processedWithTime = allEnquiries.filter(e => e.processingTime != null);
+    const processedWithTime = allEnquiries.filter((e: Enquiry) => e.processingTime != null);
     const avgTimeInMs = processedWithTime.length > 0
-      ? processedWithTime.reduce((acc, curr) => acc + (curr.processingTime || 0), 0) / processedWithTime.length
+      ? processedWithTime.reduce((acc: number, curr: Enquiry) => acc + (curr.processingTime || 0), 0) / processedWithTime.length
       : 0;
     
     // Format average time as string (convert ms to seconds)
@@ -790,7 +848,7 @@ export class DatabaseStorage implements IStorage {
 
 // Import drizzle-orm functions
 import { eq } from "drizzle-orm";
-import { Json } from "drizzle-orm/pg-core";
+import { json } from "drizzle-orm/pg-core";
 
 // Use PostgreSQL storage instead of memory storage
 export const storage = new DatabaseStorage();

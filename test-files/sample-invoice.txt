@@ -1,0 +1,10 @@
+INVOICE #123
+Date: 2024-03-15
+Supplier: Paper Supply Co.
+Customer: ABC Packaging Ltd.
+Total: 5000.00 GBP
+
+Items:
+1. BAGPAPER123 - Kraft Paper Bags 10x15cm - Qty: 500 - Unit: £0.25 - Total: £125.00
+2. STATIONER001 - Office Supplies - Qty: 20 - Unit: £15.00 - Total: £300.00
+
