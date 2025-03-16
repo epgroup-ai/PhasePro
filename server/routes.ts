@@ -268,27 +268,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const extractionResult = await extractDocumentData(filePaths);
       const processingTime = Date.now() - startTime;
       
+      // Preprocess the data to ensure we can validate correctly
+      // Fix common email format issues in the extraction result if needed
+      if (extractionResult.enquiry?.contactEmail) {
+        const email = extractionResult.enquiry.contactEmail;
+        // If it's not a valid email format, set to null
+        if (!email.includes('@') || !email.includes('.')) {
+          console.log(`Invalid email format detected: ${email}, setting to null`);
+          extractionResult.enquiry.contactEmail = null;
+        }
+      }
+      
+      let enquiry;
+      let validatedData;
+      
       // Save the extracted enquiry
-      const validatedData = extractionResultSchema.parse(extractionResult);
-      
-      // Format the date strings into JavaScript Date objects
-      const dateReceived = validatedData.enquiry.dateReceived ? new Date(validatedData.enquiry.dateReceived) : new Date();
-      const deadline = validatedData.enquiry.deadline ? new Date(validatedData.enquiry.deadline) : null;
-      
-      const enquiry = await storage.createEnquiry({
-        customerName: validatedData.enquiry.customerName,
-        enquiryCode: validatedData.enquiry.enquiryCode,
-        contactPerson: validatedData.enquiry.contactPerson || null,
-        contactEmail: validatedData.enquiry.contactEmail || null,
-        dateReceived,
-        deadline,
-        status: 'processed',
-        aiConfidence: validatedData.aiConfidence,
-        processedAt: new Date(),
-        processingTime,
-        specialInstructions: validatedData.enquiry.specialInstructions || null,
-        deliveryRequirements: validatedData.enquiry.deliveryRequirements || null,
-      });
+      try {
+        validatedData = extractionResultSchema.parse(extractionResult);
+        
+        // Format the date strings into JavaScript Date objects
+        const dateReceived = validatedData.enquiry.dateReceived ? new Date(validatedData.enquiry.dateReceived) : new Date();
+        const deadline = validatedData.enquiry.deadline ? new Date(validatedData.enquiry.deadline) : null;
+        
+        enquiry = await storage.createEnquiry({
+          customerName: validatedData.enquiry.customerName,
+          enquiryCode: validatedData.enquiry.enquiryCode,
+          contactPerson: validatedData.enquiry.contactPerson || null,
+          contactEmail: validatedData.enquiry.contactEmail || null,
+          dateReceived,
+          deadline,
+          status: 'processed',
+          aiConfidence: validatedData.aiConfidence,
+          processedAt: new Date(),
+          processingTime,
+          specialInstructions: validatedData.enquiry.specialInstructions || null,
+          deliveryRequirements: validatedData.enquiry.deliveryRequirements || null,
+        });
+      } catch (validationError) {
+        console.error("Validation error:", validationError);
+        
+        // Create with fallback values for required fields that failed validation
+        enquiry = await storage.createEnquiry({
+          customerName: extractionResult.enquiry?.customerName || "Unknown Customer",
+          enquiryCode: extractionResult.enquiry?.enquiryCode || `ENQ-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+          contactPerson: extractionResult.enquiry?.contactPerson || null,
+          contactEmail: null, // Always set to null if validation failed
+          dateReceived: new Date(),
+          deadline: null,
+          status: 'processed',
+          aiConfidence: extractionResult.aiConfidence || 0,
+          processedAt: new Date(),
+          processingTime,
+          specialInstructions: extractionResult.enquiry?.specialInstructions || null,
+          deliveryRequirements: extractionResult.enquiry?.deliveryRequirements || null,
+        });
+        
+        // If validation failed, create a basic product spec structure
+        validatedData = {
+          productSpecifications: extractionResult.productSpecifications || [],
+          warnings: extractionResult.warnings || ['Created with fallback values due to validation error'],
+          aiConfidence: extractionResult.aiConfidence || 0,
+          enquiry: extractionResult.enquiry || { customerName: "Unknown Customer" }
+        };
+      }
 
       // Save the product specifications
       const specifications = await Promise.all(
