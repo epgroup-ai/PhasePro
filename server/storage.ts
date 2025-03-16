@@ -650,6 +650,41 @@ export class DatabaseStorage implements IStorage {
     const processingTime = insertEnquiry.processingTime || null;
     const status = insertEnquiry.status || "pending";
     
+    // Generate a unique enquiry code if not provided
+    if (!insertEnquiry.enquiryCode) {
+      // Get the current year
+      const year = new Date().getFullYear();
+      
+      // Generate a base code pattern
+      const baseCode = `ENQ-${year}-`;
+      
+      // Find the highest existing code with this prefix
+      const existingEnquiries = await this.db.select()
+        .from(enquiries)
+        .where(like(enquiries.enquiryCode, `${baseCode}%`))
+        .orderBy(sql`enquiry_code DESC`)
+        .limit(1);
+      
+      let nextCounter = 1;
+      
+      if (existingEnquiries.length > 0) {
+        const lastCode = existingEnquiries[0].enquiryCode;
+        const counterStr = lastCode.substring(baseCode.length);
+        const counter = parseInt(counterStr, 10);
+        if (!isNaN(counter)) {
+          nextCounter = counter + 1;
+        }
+      }
+      
+      insertEnquiry.enquiryCode = `${baseCode}${nextCounter.toString().padStart(4, '0')}`;
+    } else {
+      // Check if the provided enquiry code already exists
+      const existingEnquiry = await this.getEnquiryByCode(insertEnquiry.enquiryCode);
+      if (existingEnquiry) {
+        throw new Error(`Enquiry with code ${insertEnquiry.enquiryCode} already exists`);
+      }
+    }
+    
     const result = await this.db.insert(enquiries).values({
       ...insertEnquiry,
       status,
@@ -847,7 +882,7 @@ export class DatabaseStorage implements IStorage {
 }
 
 // Import drizzle-orm functions
-import { eq } from "drizzle-orm";
+import { eq, like, sql } from "drizzle-orm";
 import { json } from "drizzle-orm/pg-core";
 
 // Use PostgreSQL storage instead of memory storage
