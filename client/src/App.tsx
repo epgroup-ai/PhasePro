@@ -7,6 +7,7 @@ import EnquiryDetail from "@/pages/enquiry-detail";
 import Analytics from "@/pages/analytics";
 import Settings from "@/pages/settings";
 import AuthPage from "@/pages/auth-page";
+import WebSocketTestPage from "@/pages/websocket-test-page";
 import Header from "@/components/layout/header";
 import NavigationTabs from "@/components/layout/navigation-tabs";
 import Footer from "@/components/layout/footer";
@@ -106,6 +107,9 @@ function AuthenticatedRoutes() {
           </Route>
           <Route path="/settings">
             <Settings />
+          </Route>
+          <Route path="/websocket-test">
+            <WebSocketTestPage />
           </Route>
           <Route path="/auth">
             <AuthPage />
