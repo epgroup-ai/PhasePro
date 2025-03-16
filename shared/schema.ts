@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, numeric, foreignKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -161,3 +161,105 @@ export const extractionResultSchema = z.object({
 });
 
 export type ExtractionResult = z.infer<typeof extractionResultSchema>;
+
+// Invoice schema
+export const invoices = pgTable("invoices", {
+  id: serial("id").primaryKey(),
+  invoiceNumber: text("invoice_number").notNull(),
+  invoiceDate: timestamp("invoice_date").notNull(),
+  supplierName: text("supplier_name").notNull(),
+  customerName: text("customer_name").notNull(),
+  totalAmount: numeric("total_amount").notNull(),
+  currency: text("currency").notNull().default("GBP"),
+  status: text("status").notNull().default("pending"),
+  supplierContact: text("supplier_contact"),
+  customerReference: text("customer_reference"),
+  paymentTerms: text("payment_terms"),
+  dueDate: timestamp("due_date"),
+  taxAmount: numeric("tax_amount"),
+  uploadedBy: integer("uploaded_by"),
+  uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
+  assignedTo: text("assigned_to"),
+  assignedToName: text("assigned_to_name"),
+  assignedToDepartment: text("assigned_to_department"),
+  processedAt: timestamp("processed_at"),
+  processingTime: integer("processing_time"),
+  aiConfidence: numeric("ai_confidence"),
+  rawText: text("raw_text"),
+  filePath: text("file_path"),
+});
+
+export const insertInvoiceSchema = createInsertSchema(invoices).omit({
+  id: true,
+  uploadedAt: true,
+  processedAt: true,
+});
+
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+export type Invoice = typeof invoices.$inferSelect;
+
+// Invoice items schema
+export const invoiceItems = pgTable("invoice_items", {
+  id: serial("id").primaryKey(),
+  invoiceId: integer("invoice_id").notNull(),
+  sku: text("sku").notNull(),
+  description: text("description").notNull(),
+  quantity: numeric("quantity").notNull(),
+  unitPrice: numeric("unit_price").notNull(),
+  totalPrice: numeric("total_price").notNull(),
+  category: text("category"),
+  categoryManagerId: text("category_manager_id"),
+  categoryManagerName: text("category_manager_name"),
+  categoryManagerDepartment: text("category_manager_department"),
+});
+
+export const insertInvoiceItemSchema = createInsertSchema(invoiceItems).omit({
+  id: true,
+});
+
+export type InsertInvoiceItem = z.infer<typeof insertInvoiceItemSchema>;
+export type InvoiceItem = typeof invoiceItems.$inferSelect;
+
+// Category Manager schema
+export const categoryManagerSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  department: z.string(),
+});
+
+export type CategoryManager = z.infer<typeof categoryManagerSchema>;
+
+// Parsed Invoice schema for API responses
+export const parsedInvoiceSchema = z.object({
+  meta: z.object({
+    invoiceNumber: z.string(),
+    invoiceDate: z.string(),
+    supplierName: z.string(),
+    supplierContact: z.string().optional(),
+    customerName: z.string(),
+    customerReference: z.string().optional(),
+    totalAmount: z.number(),
+    currency: z.string(),
+    paymentTerms: z.string().optional(),
+    dueDate: z.string().optional(),
+    taxAmount: z.number().optional(),
+  }),
+  items: z.array(
+    z.object({
+      sku: z.string(),
+      description: z.string(),
+      quantity: z.number(),
+      unitPrice: z.number(),
+      totalPrice: z.number(),
+      category: z.string().optional(),
+      categoryManager: categoryManagerSchema.optional(),
+    })
+  ),
+  status: z.enum(['pending', 'processed', 'assigned', 'completed']),
+  assignedTo: categoryManagerSchema.optional(),
+  processingTime: z.number().optional(),
+  confidence: z.number(),
+  rawText: z.string().optional(),
+});
+
+export type ParsedInvoice = z.infer<typeof parsedInvoiceSchema>;

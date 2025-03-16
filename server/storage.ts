@@ -53,6 +53,21 @@ export interface IStorage {
   getSpecSheet(id: number): Promise<SpecSheet | undefined>;
   getSpecSheetsByEnquiryId(enquiryId: number): Promise<SpecSheet[]>;
 
+  // Invoice methods
+  createInvoice(invoice: InsertInvoice): Promise<Invoice>;
+  getInvoice(id: number): Promise<Invoice | undefined>;
+  getInvoiceByNumber(invoiceNumber: string): Promise<Invoice | undefined>;
+  getAllInvoices(): Promise<Invoice[]>;
+  getInvoicesByAssignee(assigneeId: string): Promise<Invoice[]>;
+  updateInvoice(id: number, data: Partial<InsertInvoice>): Promise<Invoice>;
+  deleteInvoice(id: number): Promise<void>;
+
+  // Invoice Item methods
+  createInvoiceItem(item: InsertInvoiceItem): Promise<InvoiceItem>;
+  getInvoiceItems(invoiceId: number): Promise<InvoiceItem[]>;
+  updateInvoiceItem(id: number, data: Partial<InsertInvoiceItem>): Promise<InvoiceItem>;
+  deleteInvoiceItem(id: number): Promise<void>;
+
   // Dashboard Stats
   getDashboardStats(): Promise<DashboardStats>;
 }
@@ -558,6 +573,96 @@ export class DatabaseStorage implements IStorage {
   async getSpecSheetsByEnquiryId(enquiryId: number): Promise<SpecSheet[]> {
     const result = await this.db.select().from(specSheets).where(eq(specSheets.enquiryId, enquiryId));
     return result;
+  }
+
+  // Invoice methods
+  async createInvoice(insertInvoice: InsertInvoice): Promise<Invoice> {
+    const result = await this.db.insert(invoices).values({
+      ...insertInvoice,
+      uploadedAt: new Date(),
+      processedAt: insertInvoice.processedAt || null,
+      processingTime: insertInvoice.processingTime || null,
+      aiConfidence: insertInvoice.aiConfidence || null,
+      uploadedBy: insertInvoice.uploadedBy || null,
+      assignedTo: insertInvoice.assignedTo || null,
+      assignedToName: insertInvoice.assignedToName || null,
+      assignedToDepartment: insertInvoice.assignedToDepartment || null,
+      dueDate: insertInvoice.dueDate || null,
+      taxAmount: insertInvoice.taxAmount || null,
+      rawText: insertInvoice.rawText || null,
+      filePath: insertInvoice.filePath || null,
+      supplierContact: insertInvoice.supplierContact || null,
+      customerReference: insertInvoice.customerReference || null,
+      paymentTerms: insertInvoice.paymentTerms || null,
+    }).returning();
+    
+    return result[0];
+  }
+
+  async getInvoice(id: number): Promise<Invoice | undefined> {
+    const result = await this.db.select().from(invoices).where(eq(invoices.id, id)).limit(1);
+    return result[0] || undefined;
+  }
+
+  async getInvoiceByNumber(invoiceNumber: string): Promise<Invoice | undefined> {
+    const result = await this.db.select().from(invoices).where(eq(invoices.invoiceNumber, invoiceNumber)).limit(1);
+    return result[0] || undefined;
+  }
+
+  async getAllInvoices(): Promise<Invoice[]> {
+    const result = await this.db.select().from(invoices);
+    return result;
+  }
+
+  async getInvoicesByAssignee(assigneeId: string): Promise<Invoice[]> {
+    const result = await this.db.select().from(invoices).where(eq(invoices.assignedTo, assigneeId));
+    return result;
+  }
+
+  async updateInvoice(id: number, data: Partial<InsertInvoice>): Promise<Invoice> {
+    const result = await this.db
+      .update(invoices)
+      .set(data)
+      .where(eq(invoices.id, id))
+      .returning();
+    
+    return result[0];
+  }
+
+  async deleteInvoice(id: number): Promise<void> {
+    await this.db.delete(invoices).where(eq(invoices.id, id));
+  }
+
+  // Invoice Item methods
+  async createInvoiceItem(insertItem: InsertInvoiceItem): Promise<InvoiceItem> {
+    const result = await this.db.insert(invoiceItems).values({
+      ...insertItem,
+      category: insertItem.category || null,
+      categoryManagerId: insertItem.categoryManagerId || null,
+      categoryManagerName: insertItem.categoryManagerName || null,
+      categoryManagerDepartment: insertItem.categoryManagerDepartment || null,
+    }).returning();
+    
+    return result[0];
+  }
+
+  async getInvoiceItems(invoiceId: number): Promise<InvoiceItem[]> {
+    const result = await this.db.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, invoiceId));
+    return result;
+  }
+
+  async updateInvoiceItem(id: number, data: Partial<InsertInvoiceItem>): Promise<InvoiceItem> {
+    const result = await this.db
+      .update(invoiceItems)
+      .set(data)
+      .where(eq(invoiceItems.id, id))
+      .returning();
+    
+    return result[0];
+  }
+
+  async deleteInvoiceItem(id: number): Promise<void> {
+    await this.db.delete(invoiceItems).where(eq(invoiceItems.id, id));
   }
 
   // Dashboard Stats
