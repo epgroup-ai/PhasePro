@@ -140,7 +140,7 @@ export const extractionResultSchema = z.object({
     customerName: z.string(),
     enquiryCode: z.string(),
     contactPerson: z.string().optional(),
-    contactEmail: z.string().email().optional(),
+    contactEmail: z.union([z.string().email(), z.string().length(0), z.null()]).optional(),
     dateReceived: z.string(),
     deadline: z.string().optional(),
     specialInstructions: z.string().optional(),
