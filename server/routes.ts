@@ -770,9 +770,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let assignedToDepartment = null;
 
       if (validatedInvoice.assignedTo) {
-        assignedToId = validatedInvoice.assignedTo.id;
+        // Ensure the ID is stored as a string
+        assignedToId = String(validatedInvoice.assignedTo.id);
         assignedToName = validatedInvoice.assignedTo.name;
         assignedToDepartment = validatedInvoice.assignedTo.department;
+        console.log(`Invoice assignedToId (after conversion): ${assignedToId}, type: ${typeof assignedToId}`);
       }
 
       // Create new invoice record
@@ -807,9 +809,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let categoryManagerDepartment = null;
 
           if (item.categoryManager) {
-            categoryManagerId = item.categoryManager.id;
+            // Ensure the ID is stored as a string
+            categoryManagerId = String(item.categoryManager.id);
             categoryManagerName = item.categoryManager.name;
             categoryManagerDepartment = item.categoryManager.department;
+            console.log(`Invoice item categoryManagerId (after conversion): ${categoryManagerId}, type: ${typeof categoryManagerId}`);
           }
 
           return storage.createInvoiceItem({

@@ -129,7 +129,7 @@ export async function parseInvoiceDocument(filePath: string): Promise<ParsedInvo
         categoryManager = getCategoryManager(item.sku, item.description);
       }
       
-      console.log(`Assigned item "${item.description}" (SKU: ${item.sku}) to Category Manager: ${categoryManager?.name || 'None'}`);
+      console.log(`Assigned item "${item.description}" (SKU: ${item.sku}) to Category Manager: ${categoryManager?.name || 'None'} (ID: ${categoryManager?.id || 'None'}, Type: ${typeof categoryManager?.id})`);
       
       return {
         ...item,
@@ -166,6 +166,12 @@ export async function parseInvoiceDocument(filePath: string): Promise<ParsedInvo
     }
     
     const processingTime = Date.now() - startTime;
+    
+    if (primaryManager) {
+      console.log(`Selected primary category manager for invoice: ${primaryManager.name} (ID: ${primaryManager.id}, Type: ${typeof primaryManager.id})`);
+    } else {
+      console.log('No primary category manager selected for this invoice');
+    }
     
     // Return the parsed invoice with category assignments
     return {
