@@ -297,7 +297,22 @@ export class MemStorage implements IStorage {
   // Spec Sheet methods
   async createSpecSheet(insertSpecSheet: InsertSpecSheet): Promise<SpecSheet> {
     const id = this.specSheetCurrentId++;
-    const specSheet: SpecSheet = { ...insertSpecSheet, id, generatedAt: new Date() };
+    
+    // Always ensure content is stored as a JSON string to match how database would handle it
+    const contentToStore = typeof insertSpecSheet.content === 'string' 
+      ? insertSpecSheet.content 
+      : JSON.stringify(insertSpecSheet.content);
+    
+    // Create the spec sheet with properly formatted content
+    const specSheet: SpecSheet = { 
+      ...insertSpecSheet, 
+      id, 
+      generatedAt: new Date(),
+      content: contentToStore,
+    };
+    
+    console.log(`Created spec sheet #${id} with content type: ${typeof contentToStore}`);
+    
     this.specSheets.set(id, specSheet);
     return specSheet;
   }
@@ -733,10 +748,19 @@ export class DatabaseStorage implements IStorage {
     const version = insertSpecSheet.version || 1;
     const generatedBy = insertSpecSheet.generatedBy || null;
     
+    // Ensure content is in the proper format for DB storage
+    // PG JSON column expects either a JSON string or an object that can be stringified
+    const content = typeof insertSpecSheet.content === 'string' 
+      ? insertSpecSheet.content 
+      : JSON.stringify(insertSpecSheet.content);
+    
+    console.log(`DB Storage: Creating spec sheet with content type: ${typeof content}`);
+    
     const result = await this.db.insert(specSheets).values({
-      ...insertSpecSheet,
+      enquiryId: insertSpecSheet.enquiryId,
       version,
       generatedBy,
+      content,
       generatedAt: new Date()
     }).returning();
     

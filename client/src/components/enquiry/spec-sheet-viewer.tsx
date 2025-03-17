@@ -40,9 +40,30 @@ export default function SpecSheetViewer({ specSheets }: SpecSheetViewerProps) {
 
   // Helper function to map spec sheets to properly typed objects
   const mapSpecSheet = (sheet: SpecSheet): SpecSheet & { content: SpecSheetContent } => {
+    // Handle both string and object content formats
+    let parsedContent: SpecSheetContent;
+    
+    if (typeof sheet.content === 'string') {
+      try {
+        parsedContent = JSON.parse(sheet.content) as unknown as SpecSheetContent;
+      } catch (error) {
+        console.error('Error parsing spec sheet content:', error);
+        // Provide empty default content if parsing fails
+        parsedContent = {
+          enquiry: {} as any,
+          specifications: [],
+          generatedAt: new Date().toISOString(),
+        };
+      }
+    } else {
+      parsedContent = sheet.content as unknown as SpecSheetContent;
+    }
+    
+    console.log('Parsed spec sheet content:', parsedContent);
+    
     return {
       ...sheet,
-      content: sheet.content as unknown as SpecSheetContent
+      content: parsedContent
     };
   };
   

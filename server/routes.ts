@@ -598,16 +598,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Create a structured content object
+      const specSheetContent = {
+        enquiry,
+        specifications: specs,
+        generatedAt: new Date().toISOString(),
+        categoryManager: primaryCategoryManager, // Primary category manager for the enquiry
+        productCategoryAssignments // Individual assignments for each product
+      };
+      
+      console.log('Creating spec sheet with content:', JSON.stringify(specSheetContent).substring(0, 100) + '...');
+      
       const specSheet = await storage.createSpecSheet({
         enquiryId: id,
         generatedBy: req.body.generatedBy || 'system',
-        content: {
-          enquiry,
-          specifications: specs,
-          generatedAt: new Date().toISOString(),
-          categoryManager: primaryCategoryManager, // Primary category manager for the enquiry
-          productCategoryAssignments // Individual assignments for each product
-        },
+        content: specSheetContent,
         version: 1,
       });
       
