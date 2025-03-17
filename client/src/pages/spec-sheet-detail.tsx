@@ -52,6 +52,7 @@ export default function SpecSheetDetail() {
       // If there's no content at all, return default structure
       if (!specSheet?.content) {
         console.warn("No content available in spec sheet");
+        parsingError = "No content available in spec sheet";
         return { enquiry: {}, specifications: [], productCategoryAssignments: [] };
       }
       
@@ -66,8 +67,12 @@ export default function SpecSheetDetail() {
           parsedContent = JSON.parse(specSheet.content);
         } catch (parseErr) {
           console.error("JSON parsing failed:", parseErr);
-          // If parse fails, it might already be an object encoded as string for some reason
-          // Try to return it as an object directly
+          // Capture the parsing error
+          parsingError = parseErr instanceof Error 
+            ? parseErr 
+            : new Error("Failed to parse JSON content: " + String(parseErr));
+          
+          // Return a default structure
           return { 
             enquiry: {}, 
             specifications: [], 
@@ -104,7 +109,10 @@ export default function SpecSheetDetail() {
       return validatedContent;
     } catch (error) {
       console.error("Fatal error in content parsing:", error);
-      parsingError = error;
+      // Ensure error is of a known type
+      parsingError = error instanceof Error 
+        ? error 
+        : new Error("Unknown error: " + String(error));
       return { enquiry: {}, specifications: [], productCategoryAssignments: [] };
     }
   };

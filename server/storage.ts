@@ -798,22 +798,52 @@ export class DatabaseStorage implements IStorage {
     const generatedBy = insertSpecSheet.generatedBy || null;
     
     // Ensure content is in the proper format for DB storage
-    // PG JSON column expects either a JSON string or an object that can be stringified
-    const content = typeof insertSpecSheet.content === 'string' 
-      ? insertSpecSheet.content 
-      : JSON.stringify(insertSpecSheet.content);
+    let contentToStore;
+    try {
+      contentToStore = typeof insertSpecSheet.content === 'string' 
+        ? insertSpecSheet.content 
+        : JSON.stringify(insertSpecSheet.content);
+      
+      console.log(`DB Storage: Successfully formatted content for spec sheet`);
+    } catch (error) {
+      console.error('Error stringifying spec sheet content:', error);
+      // Fallback to an empty structure if JSON stringification fails
+      contentToStore = JSON.stringify({
+        enquiry: {},
+        specifications: [],
+        productCategoryAssignments: [],
+        error: "Error processing original content"
+      });
+    }
     
-    console.log(`DB Storage: Creating spec sheet with content type: ${typeof content}`);
+    // Ensure we have a valid date
+    let generatedAt;
+    try {
+      // Check if it's a valid date object or string
+      const tempDate = new Date();
+      generatedAt = tempDate;
+    } catch (error) {
+      console.error('Error creating date for spec sheet:', error);
+      generatedAt = new Date(); // Fallback to current time
+    }
     
-    const result = await this.db.insert(specSheets).values({
-      enquiryId: insertSpecSheet.enquiryId,
-      version,
-      generatedBy,
-      content,
-      generatedAt: new Date()
-    }).returning();
+    console.log(`DB Storage: Creating spec sheet with content type: ${typeof contentToStore}`);
+    console.log(`DB Storage: Using generated date: ${generatedAt.toISOString()}`);
     
-    return result[0];
+    try {
+      const result = await this.db.insert(specSheets).values({
+        enquiryId: insertSpecSheet.enquiryId,
+        version,
+        generatedBy,
+        content: contentToStore,
+        generatedAt
+      }).returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error('Failed to insert spec sheet into database:', error);
+      throw new Error('Could not create spec sheet: ' + (error instanceof Error ? error.message : String(error)));
+    }
   }
 
   async getSpecSheet(id: number): Promise<SpecSheet | undefined> {
