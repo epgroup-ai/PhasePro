@@ -41,7 +41,7 @@ export default function SpecSheetDetail() {
   
   // Parse the content if it's a string
   let content = null;
-  let parsingError = null;
+  let parsingError: Error | string | null = null;
   
   const parseContent = () => {
     try {

@@ -350,9 +350,13 @@ export class MemStorage implements IStorage {
   }
 
   async getSpecSheetsByEnquiryId(enquiryId: number): Promise<SpecSheet[]> {
-    return Array.from(this.specSheets.values()).filter(
+    // Filter spec sheets by enquiry ID
+    const sheets = Array.from(this.specSheets.values()).filter(
       (sheet) => sheet.enquiryId === enquiryId,
     );
+    
+    // Return deep copies to prevent mutations
+    return sheets.map(sheet => ({ ...sheet }));
   }
 
   // Invoice methods
