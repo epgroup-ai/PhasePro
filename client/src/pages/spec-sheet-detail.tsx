@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useParams, useLocation } from "wouter";
+import { useParams, useLocation, Redirect } from "wouter";
 import { SpecSheet, categoryManagerSchema } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,12 +10,13 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, ArrowLeft, Tag, Users, Printer, Download } from "lucide-react";
+import { FileText, ArrowLeft, Tag, Users, Printer, Download, AlertTriangle } from "lucide-react";
 import { LoadingAnimation } from "@/components/ui/loading-animation";
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { z } from "zod";
+import { useAuth } from "@/hooks/use-auth";
 
 // Safely get nested values from an object
 function safeGetContentValue(obj: any, path: string, defaultValue: any = null) {
@@ -30,11 +31,17 @@ function safeGetContentValue(obj: any, path: string, defaultValue: any = null) {
 export default function SpecSheetDetail() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
+  const { user, isLoading: isLoadingAuth } = useAuth();
+
+  // Redirect to auth page if not authenticated
+  if (!isLoadingAuth && !user) {
+    return <Redirect to="/auth" />;
+  }
 
   // Fetch spec sheet data
   const { data, isLoading, error } = useQuery<{ specSheet: SpecSheet }>({
     queryKey: ['/api/spec-sheets', parseInt(id)],
-    enabled: !!id,
+    enabled: !!id && !!user, // Only fetch when authenticated
   });
 
   const specSheet = data?.specSheet;
@@ -137,6 +144,18 @@ export default function SpecSheetDetail() {
 
   // Get the primary category manager
   const primaryManager = safeGetContentValue(content, 'categoryManager', null);
+  
+  if (isLoadingAuth) {
+    return (
+      <div className="flex justify-center items-center h-[50vh]">
+        <LoadingAnimation
+          variant="default"
+          size="lg"
+          text="Verifying authentication..."
+        />
+      </div>
+    );
+  }
   
   if (isLoading) {
     return (
