@@ -40,13 +40,31 @@ export default function SpecSheetDetail() {
   const specSheet = data?.specSheet;
   
   // Parse the content if it's a string
-  const content = specSheet?.content ? 
-    (typeof specSheet.content === 'string' ? 
-      JSON.parse(specSheet.content) : 
-      specSheet.content) 
-    : null;
+  let content = null;
+  try {
+    if (specSheet?.content) {
+      if (typeof specSheet.content === 'string') {
+        content = JSON.parse(specSheet.content);
+      } else {
+        content = specSheet.content;
+      }
+      
+      // Ensure content structure is valid by using safe access methods
+      if (content && !content.enquiry) {
+        console.error("Missing enquiry data in spec sheet content");
+        content = { ...content, enquiry: {} };
+      }
+      
+      if (content && !content.specifications) {
+        console.error("Missing specifications in spec sheet content");
+        content = { ...content, specifications: [] };
+      }
+    }
+  } catch (error) {
+    console.error("Error parsing spec sheet content:", error);
+  }
 
-  // Extract product category assignments
+  // Extract product category assignments safely
   const productAssignments = safeGetContentValue(content, 'productCategoryAssignments', []);
   
   // Group products by category manager

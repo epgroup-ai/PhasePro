@@ -620,21 +620,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Find the most frequent category manager
         let maxCount = 0;
+        // Type assertion to ensure TypeScript knows the structure of the manager object
         Object.values(managerCounts).forEach(({ count, manager }) => {
           if (count > maxCount) {
             maxCount = count;
-            primaryCategoryManager = manager;
+            // Properly cast the manager to CategoryManager type
+            primaryCategoryManager = manager as CategoryManager;
           }
         });
       }
       
-      // Create a structured content object
+      // Sanitize the data to avoid circular references and ensure proper serialization
+      // Helper function to sanitize an object by converting it to JSON and back
+      const sanitizeForStorage = (obj: any): any => {
+        try {
+          // Convert dates to ISO strings
+          const replacer = (key: string, value: any): any => {
+            if (value instanceof Date) {
+              return value.toISOString();
+            }
+            return value;
+          };
+          return JSON.parse(JSON.stringify(obj, replacer));
+        } catch (error) {
+          console.error('Error sanitizing object:', error);
+          return {};
+        }
+      };
+      
+      // Create a sanitized structured content object
       const specSheetContent = {
-        enquiry,
-        specifications: specs,
+        enquiry: sanitizeForStorage(enquiry),
+        specifications: specs.map(spec => sanitizeForStorage(spec)),
         generatedAt: new Date().toISOString(),
-        categoryManager: primaryCategoryManager, // Primary category manager for the enquiry
-        productCategoryAssignments // Individual assignments for each product
+        categoryManager: primaryCategoryManager ? sanitizeForStorage(primaryCategoryManager) : null,
+        productCategoryAssignments: productCategoryAssignments ? 
+          productCategoryAssignments.map(assignment => sanitizeForStorage(assignment)) : []
       };
       
       console.log('Creating spec sheet with content:', JSON.stringify(specSheetContent).substring(0, 100) + '...');
