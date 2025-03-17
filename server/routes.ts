@@ -650,21 +650,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (primaryCategoryManager) {
         console.log(`Updating enquiry ${id} with primary category manager: ${primaryCategoryManager.name} (${primaryCategoryManager.id})`);
         
-        const updatedEnquiry = await storage.updateEnquiry(id, {
-          assignedTo: primaryCategoryManager.id,
-          assignedToName: primaryCategoryManager.name,
-          assignedToDepartment: primaryCategoryManager.department,
-          status: 'assigned' // Update status to reflect the assignment
-        });
-        
-        console.log(`Enquiry ${id} successfully assigned to ${primaryCategoryManager.name}`);
-        
-        // Return both the spec sheet and updated enquiry
-        res.json({
-          specSheet,
-          enquiry: updatedEnquiry,
-          categoryManager: primaryCategoryManager
-        });
+        try {
+          const updatedEnquiry = await storage.updateEnquiry(id, {
+            assignedTo: primaryCategoryManager.id,
+            assignedToName: primaryCategoryManager.name,
+            assignedToDepartment: primaryCategoryManager.department,
+            status: 'assigned' // Update status to reflect the assignment
+          });
+          
+          console.log(`Enquiry ${id} successfully assigned to ${primaryCategoryManager.name}`);
+          
+          // Return both the spec sheet and updated enquiry
+          res.json({
+            specSheet,
+            enquiry: updatedEnquiry,
+            categoryManager: primaryCategoryManager
+          });
+        } catch (error) {
+          console.error('Error updating enquiry with category manager:', error);
+          
+          // Still return the spec sheet even if the update fails
+          res.json({
+            specSheet,
+            enquiry,
+            categoryManager: primaryCategoryManager,
+            updateError: 'Failed to update enquiry with category manager information'
+          });
+        }
       } else {
         console.log(`No primary category manager found for enquiry ${id}`);
         res.json({ 
