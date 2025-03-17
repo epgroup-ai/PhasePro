@@ -7,6 +7,7 @@ interface CategoryData {
   code: string;
   group: string;
   manager: CategoryManager;
+  description?: string;
 }
 
 // Map of category managers by their ID
@@ -53,7 +54,7 @@ function loadCategoryData(): CategoryData[] {
     const records = parse(fileContent, {
       columns: false,
       skip_empty_lines: true,
-      from_line: 2 // Skip header row
+      from_line: 6 // Skip header rows and start from the actual data
     });
     
     const categoryData: CategoryData[] = [];
@@ -63,24 +64,58 @@ function loadCategoryData(): CategoryData[] {
       // First column is the product code/SKU prefix
       const code = row[0];
       
-      // Ignore empty rows or headers
-      if (!code || code.trim() === '' || code === 'Skus' || code === 'A =JH' || code.startsWith(' ')) {
+      // Ignore empty rows or header/footer rows
+      if (!code || 
+          code.trim() === '' || 
+          code === 'Skus' || 
+          code === 'New Total' ||
+          code === 'Current' ||
+          code === 'A =JH' || 
+          code === ' ' ||
+          code.startsWith('Paper Factory') ||
+          code.startsWith('Retail paper') ||
+          code.startsWith('Cups') ||
+          code.startsWith('Cutlery') ||
+          code.startsWith('Straws') ||
+          code.startsWith('Wooden') ||
+          code.startsWith('FBB Incl') ||
+          code.startsWith('Miscellaneous') ||
+          code.startsWith('A =')) {
         return;
       }
       
       // Second column is manager category (A, B, C, D, E)
       const managerCode = row[1];
       
-      if (managerCode && categoryManagerMap[managerCode]) {
-        categoryData.push({
-          code: code.trim().toUpperCase(),
-          group: managerCode,
-          manager: categoryManagerMap[managerCode]
-        });
+      // Skip if no manager code or not a valid category
+      if (!managerCode || !categoryManagerMap[managerCode]) {
+        return;
       }
+      
+      // Add the category mapping
+      categoryData.push({
+        code: code.trim().toUpperCase(),
+        group: managerCode,
+        manager: categoryManagerMap[managerCode],
+        // Include description from column 2 or 3 if available
+        description: row[2] ? row[2].trim() : (row[3] ? row[3].trim() : '')
+      });
     });
     
-    console.log(`Loaded ${categoryData.length} category mappings`);
+    // Also add keyword-based mappings for special cases
+    const keywordMappings = [
+      { code: 'PAPER BAG', group: 'E', manager: categoryManagerMap['E'], description: 'Paper Bags' },
+      { code: 'KRAFT BAG', group: 'E', manager: categoryManagerMap['E'], description: 'Kraft Paper Bags' },
+      { code: 'CARD BOX', group: 'E', manager: categoryManagerMap['E'], description: 'Cardboard Boxes' },
+      { code: 'PLASTIC BAG', group: 'D', manager: categoryManagerMap['D'], description: 'Plastic Bags' },
+      { code: 'POLY BAG', group: 'D', manager: categoryManagerMap['D'], description: 'Polythene Bags' },
+      { code: 'FOOD CONTAINER', group: 'B', manager: categoryManagerMap['B'], description: 'Food Containers' },
+      { code: 'FOOD BOX', group: 'B', manager: categoryManagerMap['B'], description: 'Food Boxes' }
+    ];
+    
+    categoryData.push(...keywordMappings);
+    
+    console.log(`Loaded ${categoryData.length} category mappings from CSV`);
     return categoryData;
   } catch (error) {
     console.error('Error loading category data:', error);
@@ -96,9 +131,10 @@ let categoryData: CategoryData[] | null = null;
  * Get the category manager for a product based on its type or code
  * 
  * @param productType The product type or description
+ * @param additionalDetails Additional product details or description to help with matching
  * @returns The category manager or null if no match
  */
-export function getCategoryManagerForProduct(productType: string): CategoryManager | null {
+export function getCategoryManagerForProduct(productType: string, additionalDetails?: string): CategoryManager | null {
   // Load category data if not already loaded
   if (!categoryData) {
     categoryData = loadCategoryData();
@@ -106,47 +142,98 @@ export function getCategoryManagerForProduct(productType: string): CategoryManag
   
   // Convert product type to uppercase for case-insensitive matching
   const normalizedProductType = productType.toUpperCase();
+  const normalizedDetails = additionalDetails ? additionalDetails.toUpperCase() : '';
+  
+  // Combined text for matching
+  const combinedText = `${normalizedProductType} ${normalizedDetails}`;
   
   // Look for exact matches first (by code/prefix)
   for (const category of categoryData) {
     if (normalizedProductType.startsWith(category.code)) {
+      console.log(`Found exact category match for "${productType}": ${category.code} -> ${category.manager.name}`);
       return category.manager;
     }
   }
   
-  // Look for keyword matches in the product type
-  const keywords: Record<string, CategoryManager> = {
-    'BAG': categoryManagerMap['E'], // Default to paper bags unless plastic specified
+  // Special case handling for common categories with extra details
+  if (combinedText.includes('PLASTIC') && combinedText.includes('BAG')) {
+    console.log(`Found special case match for "${productType}": Plastic bags -> ${categoryManagerMap['D'].name}`);
+    return categoryManagerMap['D'];
+  }
+  
+  if ((combinedText.includes('PAPER') || combinedText.includes('KRAFT')) && combinedText.includes('BAG')) {
+    console.log(`Found special case match for "${productType}": Paper bags -> ${categoryManagerMap['E'].name}`);
+    return categoryManagerMap['E'];
+  }
+  
+  if (combinedText.includes('FOOD') && (combinedText.includes('CONTAINER') || combinedText.includes('PACKAGING'))) {
+    console.log(`Found special case match for "${productType}": Food containers -> ${categoryManagerMap['B'].name}`);
+    return categoryManagerMap['B'];
+  }
+  
+  // Prioritized keyword groups - order matters for overlapping terms
+  const keywordGroups = [
+    // Paper Bags (E)
+    {
+      keywords: ['KRAFT BAG', 'PAPER BAG', 'KRAFT PAPER', 'CARDBOARD BOX', 'PAPER SACK'],
+      manager: categoryManagerMap['E']
+    },
+    // Plastic Bags (D)
+    {
+      keywords: ['PLASTIC BAG', 'POLYTHENE', 'POLY BAG', 'CARRIER BAG', 'VEST CARRIER', 'REFUSE SACK'],
+      manager: categoryManagerMap['D']
+    },
+    // Catering (B)
+    {
+      keywords: ['FOOD CONTAINER', 'CUTLERY', 'CUP', 'PLATE', 'BOWL', 'STRAW', 'CATERING', 'TABLEWARE', 'FOIL CONTAINER'],
+      manager: categoryManagerMap['B']
+    },
+    // E-commerce (C)
+    {
+      keywords: ['PACKAGING', 'SHIPPING', 'E-COMMERCE', 'ECOMMERCE', 'TRANSIT', 'RESALE', 'STATIONERY', 'TAPE'],
+      manager: categoryManagerMap['C']
+    },
+    // Retail & Consumables (A)
+    {
+      keywords: ['LABEL', 'PRINT', 'STICKER', 'RETAIL', 'EQUIPMENT', 'HANGER', 'FIRSTAID', 'HYGIENE', 'TILL ROLL'],
+      manager: categoryManagerMap['A']
+    }
+  ];
+  
+  // Check each keyword group
+  for (const group of keywordGroups) {
+    for (const keyword of group.keywords) {
+      if (combinedText.includes(keyword)) {
+        console.log(`Found keyword match for "${productType}": ${keyword} -> ${group.manager.name}`);
+        return group.manager;
+      }
+    }
+  }
+  
+  // Check simplistic keyword matches as fallback
+  const fallbackKeywords: Record<string, CategoryManager> = {
+    'BAG': categoryManagerMap['E'], // Default to paper bags 
     'PAPER': categoryManagerMap['E'],
-    'CARDBOARD': categoryManagerMap['E'],
-    'PLASTIC BAG': categoryManagerMap['D'],
+    'BOARD': categoryManagerMap['E'],
+    'PLASTIC': categoryManagerMap['D'],
     'POLY': categoryManagerMap['D'],
-    'POLYTHENE': categoryManagerMap['D'],
-    'CARRIER': categoryManagerMap['D'],
     'FOOD': categoryManagerMap['B'],
     'CATER': categoryManagerMap['B'],
-    'CUTLERY': categoryManagerMap['B'],
-    'CUP': categoryManagerMap['B'],
-    'PLATE': categoryManagerMap['B'],
-    'BOWL': categoryManagerMap['B'],
-    'PACKAGING': categoryManagerMap['C'],
     'SHIP': categoryManagerMap['C'],
+    'PACK': categoryManagerMap['C'],
     'LABEL': categoryManagerMap['A'],
-    'PRINT': categoryManagerMap['A'],
-    'STICKER': categoryManagerMap['A'],
-    'TAPE': categoryManagerMap['C'],
-    'DISPENSER': categoryManagerMap['B'],
-    'EQUIPMENT': categoryManagerMap['A'],
-    'HANGER': categoryManagerMap['A']
+    'RETAIL': categoryManagerMap['A']
   };
   
-  for (const [keyword, manager] of Object.entries(keywords)) {
-    if (normalizedProductType.includes(keyword)) {
+  for (const [keyword, manager] of Object.entries(fallbackKeywords)) {
+    if (combinedText.includes(keyword)) {
+      console.log(`Found fallback keyword match for "${productType}": ${keyword} -> ${manager.name}`);
       return manager;
     }
   }
   
   // Default to retail & consumables if no match
+  console.log(`No category match found for "${productType}", defaulting to ${categoryManagerMap['A'].name}`);
   return categoryManagerMap['A'];
 }
 

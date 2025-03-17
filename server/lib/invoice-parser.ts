@@ -1,7 +1,9 @@
 import OpenAI from "openai";
 import fs from "fs";
 import path from "path";
-import { CategoryManager, getCategoryManager } from "./category-mapping";
+import { CategoryManager } from "@shared/schema";
+import { getCategoryManager } from "./category-mapping";
+import { getCategoryManagerForProduct } from "./category-mapper";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -116,9 +118,18 @@ export async function parseInvoiceDocument(filePath: string): Promise<ParsedInvo
     // Parse and validate the JSON response
     const result = JSON.parse(content) as { meta: InvoiceMeta, items: Omit<InvoiceItem, 'categoryManager'>[] };
     
-    // Assign category managers to each item
+    // Assign category managers to each item using both category-mapping and enhanced category-mapper
     const itemsWithCategories = result.items.map(item => {
-      const categoryManager = getCategoryManager(item.sku, item.description);
+      // Try first with the CSV-based category mapper (enhanced)
+      let categoryManager = getCategoryManagerForProduct(item.sku, item.description);
+      
+      // Fallback to the hardcoded category mapping if needed
+      if (!categoryManager) {
+        categoryManager = getCategoryManager(item.sku, item.description);
+      }
+      
+      console.log(`Assigned item "${item.description}" (SKU: ${item.sku}) to Category Manager: ${categoryManager?.name || 'None'}`);
+      
       return {
         ...item,
         categoryManager,

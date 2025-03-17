@@ -564,7 +564,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Assign category managers to each product specification
       const productCategoryAssignments = specs.map(spec => {
-        const categoryManager = getCategoryManagerForProduct(spec.productType);
+        // Pass both product type and additional details like dimensions and material
+        const additionalDetails = `${spec.dimensions} ${spec.material} ${spec.printType}`;
+        const categoryManager = getCategoryManagerForProduct(spec.productType, additionalDetails);
         return {
           specificationId: spec.id,
           productType: spec.productType,
