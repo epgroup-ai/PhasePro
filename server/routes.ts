@@ -651,8 +651,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Updating enquiry ${id} with primary category manager: ${primaryCategoryManager.name} (${primaryCategoryManager.id})`);
         
         try {
+          console.log('Primary category manager ID type:', typeof primaryCategoryManager.id);
+          
+          // The schema expects these fields to be text, not numbers
           const updatedEnquiry = await storage.updateEnquiry(id, {
-            assignedTo: primaryCategoryManager.id,
+            assignedTo: String(primaryCategoryManager.id), // Ensure it's a string
             assignedToName: primaryCategoryManager.name,
             assignedToDepartment: primaryCategoryManager.department,
             status: 'assigned' // Update status to reflect the assignment
@@ -662,6 +665,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Return both the spec sheet and updated enquiry
           res.json({
+            id: specSheet.id, // Ensure we're returning the ID for redirection
             specSheet,
             enquiry: updatedEnquiry,
             categoryManager: primaryCategoryManager
@@ -671,6 +675,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Still return the spec sheet even if the update fails
           res.json({
+            id: specSheet.id, // Ensure we're returning the ID for redirection
             specSheet,
             enquiry,
             categoryManager: primaryCategoryManager,
@@ -680,6 +685,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         console.log(`No primary category manager found for enquiry ${id}`);
         res.json({ 
+          id: specSheet.id, // Also make sure to return ID here for redirection
           specSheet,
           enquiry,
           categoryManager: null

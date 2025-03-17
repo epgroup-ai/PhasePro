@@ -26,12 +26,15 @@ export default function ProcessingResults({ result }: ProcessingResultsProps) {
 
   const generateSpecSheetMutation = useMutation({
     mutationFn: async () => {
+      console.log("Generating spec sheet for enquiry ID:", enquiry.id);
       const response = await apiRequest(
         "POST", 
         `/api/enquiries/${enquiry.id}/generate-spec-sheet`,
         { generatedBy: "user" }
       );
-      return response.json();
+      const data = await response.json();
+      console.log("Response from spec sheet generation:", data);
+      return data;
     },
     onSuccess: (data) => {
       toast({

@@ -370,19 +370,27 @@ async function processWithAI(text: string): Promise<ExtractionResult> {
  */
 export async function extractDocumentData(filePaths: string[]): Promise<ExtractionResult> {
   try {
-    // For development mode with no API keys, return sample data
-    if ((!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === "sk-dummy-key-for-development") 
-        && !process.env.ANTHROPIC_API_KEY) {
-      console.log("No valid AI API keys found. Using sample data for demo.");
+    // Check if we need to use API or if API key is not set
+    const hasValidApiKey = process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== "sk-dummy-key-for-development";
+    
+    // Never use sample data when files are actually uploaded, even in development
+    if (!hasValidApiKey && filePaths.length === 0) {
+      console.log("No valid AI API keys found and no files provided. Using sample data for demo.");
       
       // Check if we should use the sample for labels
-      const useLabelsSample = filePaths.some(p => p.includes('sample_enquiry_labels'));
+      const useLabelsSample = filePaths.some(p => p && p.includes('sample_enquiry_labels'));
       
       if (useLabelsSample) {
         return getSampleLabelExtractionResult();
       } else {
         return getSampleExtractionResult();
       }
+    }
+    
+    // If we have files to process but no API key, notify the user
+    if (!hasValidApiKey && filePaths.length > 0) {
+      console.warn("No valid OpenAI API key found, but files were uploaded. Please provide a valid API key.");
+      throw new Error("A valid OpenAI API key is required to process uploaded files. Please add your API key in the settings.");
     }
     
     if (filePaths.length === 0) {
@@ -433,10 +441,17 @@ export async function extractDocumentData(filePaths: string[]): Promise<Extracti
     if (error instanceof Error && 
        (error.message.includes("API key") || error.message.includes("authentication"))) {
       console.error("API authentication error. Please check your API keys.");
+      throw new Error("API authentication failed. Please check your OpenAI API key in settings.");
     }
     
-    // Fall back to sample data if processing fails
-    console.log("Using fallback sample data due to error");
+    // If we have uploaded files, don't use sample data but re-throw the error
+    if (filePaths.length > 0) {
+      console.error("Error processing uploaded files, not using fallback sample data");
+      throw error;
+    }
+    
+    // Fall back to sample data if processing fails and no files were uploaded
+    console.log("Using fallback sample data since no files were uploaded");
     
     // Check if we should use the sample for labels
     const useLabelsSample = filePaths.some(p => p?.includes('sample_enquiry_labels'));
