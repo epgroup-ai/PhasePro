@@ -173,6 +173,12 @@ export default function EnquiryDetail() {
   // Safely destructure data with proper null checks
   const { enquiry, specifications, files, specSheets = [] } = data || {};
   
+  // Debug info for spec sheets
+  console.log(`Enquiry ID: ${id}, Spec sheets count: ${specSheets?.length || 0}`);
+  if (specSheets?.length > 0) {
+    console.log("First spec sheet:", JSON.stringify(specSheets[0]).substring(0, 200) + "...");
+  }
+  
   // Add safety checks for enquiry data
   if (!enquiry) {
     return (
