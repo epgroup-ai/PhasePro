@@ -4,6 +4,7 @@ import Dashboard from "@/pages/dashboard";
 import NewEnquiry from "@/pages/new-enquiry";
 import ProcessedEnquiries from "@/pages/processed-enquiries";
 import EnquiryDetail from "@/pages/enquiry-detail";
+import SpecSheetDetail from "@/pages/spec-sheet-detail";
 import Analytics from "@/pages/analytics";
 import Settings from "@/pages/settings";
 import AuthPage from "@/pages/auth-page";
@@ -101,6 +102,9 @@ function AuthenticatedRoutes() {
           </Route>
           <Route path="/enquiries/:id">
             <EnquiryDetail />
+          </Route>
+          <Route path="/spec-sheet/:id">
+            <SpecSheetDetail />
           </Route>
           <Route path="/analytics">
             <Analytics />

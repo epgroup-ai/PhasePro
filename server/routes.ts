@@ -955,6 +955,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize WebSocket server for real-time collaboration
   const collaborationServer = new CollaborationServer(httpServer);
   
+  // Get a specific spec sheet by ID
+  app.get('/api/spec-sheets/:id', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const specSheet = await storage.getSpecSheet(id);
+      
+      if (!specSheet) {
+        return res.status(404).json({ message: 'Spec sheet not found' });
+      }
+      
+      // Get the associated enquiry to check permissions
+      const enquiry = await storage.getEnquiry(specSheet.enquiryId);
+      
+      if (!enquiry) {
+        return res.status(404).json({ message: 'Associated enquiry not found' });
+      }
+      
+      // Check if user has access to this enquiry/spec sheet
+      const userId = req.user?.id;
+      const isAdmin = req.user?.role === 'admin';
+      
+      // Only allow access if the user is an admin or the enquiry creator
+      if (!isAdmin && enquiry.createdBy !== userId) {
+        return res.status(403).json({ message: 'Access denied: You do not have permission to view this spec sheet' });
+      }
+      
+      res.json({ specSheet });
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
+  
   // Add WebSocket routes for spec sheet collaboration
   app.get('/api/collaboration/spec/:id', requireAuth, async (req: Request, res: Response) => {
     try {
