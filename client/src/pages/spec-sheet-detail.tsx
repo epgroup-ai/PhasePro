@@ -42,10 +42,13 @@ export default function SpecSheetDetail() {
   // Parse the content if it's a string
   let content = null;
   try {
+    console.log("Spec sheet content type:", typeof specSheet?.content);
     if (specSheet?.content) {
       if (typeof specSheet.content === 'string') {
+        console.log("Parsing string content, first 100 chars:", specSheet.content.substring(0, 100));
         content = JSON.parse(specSheet.content);
       } else {
+        console.log("Using object content directly");
         content = specSheet.content;
       }
       
@@ -59,9 +62,17 @@ export default function SpecSheetDetail() {
         console.error("Missing specifications in spec sheet content");
         content = { ...content, specifications: [] };
       }
+
+      // Debug content structure
+      console.log("Content keys:", content ? Object.keys(content) : "no content");
+      console.log("Content.enquiry keys:", content?.enquiry ? Object.keys(content.enquiry) : "no enquiry");
+      console.log("Content.specifications length:", content?.specifications ? content.specifications.length : 0);
+      console.log("Content.productCategoryAssignments:", content?.productCategoryAssignments ? 
+        `${content.productCategoryAssignments.length} items` : "none");
     }
   } catch (error) {
     console.error("Error parsing spec sheet content:", error);
+    content = { enquiry: {}, specifications: [], productCategoryAssignments: [] };
   }
 
   // Extract product category assignments safely
@@ -123,9 +134,15 @@ export default function SpecSheetDetail() {
         <div>
           <h1 className="text-2xl font-semibold">Specification Sheet</h1>
           <p className="text-gray-500">
-            {enquiryCode} • {customerName} • Generated {specSheet?.generatedAt 
-              ? format(new Date(specSheet.generatedAt), 'PPp')
-              : 'Unknown date'}
+            {enquiryCode} • {customerName} • Generated {(() => {
+              try {
+                if (!specSheet?.generatedAt) return 'Unknown date';
+                return format(new Date(specSheet.generatedAt), 'PPp');
+              } catch (error) {
+                console.error("Error formatting header date:", error, specSheet?.generatedAt);
+                return 'Invalid date format';
+              }
+            })()}
           </p>
         </div>
         <div className="flex space-x-3">
@@ -323,9 +340,16 @@ export default function SpecSheetDetail() {
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Date Received</dt>
                   <dd className="text-base">
-                    {safeGetContentValue(content, 'enquiry.dateReceived') 
-                      ? format(new Date(safeGetContentValue(content, 'enquiry.dateReceived')), 'PPP')
-                      : 'N/A'}
+                    {(() => {
+                      try {
+                        const dateValue = safeGetContentValue(content, 'enquiry.dateReceived');
+                        if (!dateValue) return 'N/A';
+                        return format(new Date(dateValue), 'PPP');
+                      } catch (error) {
+                        console.error("Error formatting date:", error, safeGetContentValue(content, 'enquiry.dateReceived'));
+                        return 'Invalid date format';
+                      }
+                    })()}
                   </dd>
                 </div>
                 <div>
@@ -358,9 +382,15 @@ export default function SpecSheetDetail() {
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Generated At</dt>
                   <dd className="text-base">
-                    {specSheet?.generatedAt 
-                      ? format(new Date(specSheet.generatedAt), 'PPp')
-                      : 'Unknown date'}
+                    {(() => {
+                      try {
+                        if (!specSheet?.generatedAt) return 'Unknown date';
+                        return format(new Date(specSheet.generatedAt), 'PPp');
+                      } catch (error) {
+                        console.error("Error formatting generatedAt date:", error, specSheet?.generatedAt);
+                        return 'Invalid date format';
+                      }
+                    })()}
                   </dd>
                 </div>
               </dl>
