@@ -646,7 +646,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         version: 1,
       });
       
-      res.json(specSheet);
+      // Update the enquiry with the assigned category manager information
+      if (primaryCategoryManager) {
+        console.log(`Updating enquiry ${id} with primary category manager: ${primaryCategoryManager.name} (${primaryCategoryManager.id})`);
+        
+        const updatedEnquiry = await storage.updateEnquiry(id, {
+          assignedTo: primaryCategoryManager.id,
+          assignedToName: primaryCategoryManager.name,
+          assignedToDepartment: primaryCategoryManager.department,
+          status: 'assigned' // Update status to reflect the assignment
+        });
+        
+        console.log(`Enquiry ${id} successfully assigned to ${primaryCategoryManager.name}`);
+        
+        // Return both the spec sheet and updated enquiry
+        res.json({
+          specSheet,
+          enquiry: updatedEnquiry,
+          categoryManager: primaryCategoryManager
+        });
+      } else {
+        console.log(`No primary category manager found for enquiry ${id}`);
+        res.json({ 
+          specSheet,
+          enquiry,
+          categoryManager: null
+        });
+      }
     } catch (err) {
       handleError(err, res);
     }
