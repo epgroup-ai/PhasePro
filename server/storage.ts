@@ -59,7 +59,7 @@ export interface IStorage {
   createInvoice(invoice: InsertInvoice): Promise<Invoice>;
   getInvoice(id: number): Promise<Invoice | undefined>;
   getInvoiceByNumber(invoiceNumber: string): Promise<Invoice | undefined>;
-  getAllInvoices(): Promise<Invoice[]>;
+  getAllInvoices(userId?: number): Promise<Invoice[]>;
   getInvoicesByAssignee(assigneeId: string): Promise<Invoice[]>;
   updateInvoice(id: number, data: Partial<InsertInvoice>): Promise<Invoice>;
   deleteInvoice(id: number): Promise<void>;
