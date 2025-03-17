@@ -379,7 +379,8 @@ export async function extractDocumentData(filePaths: string[]): Promise<Extracti
     
     if (filePaths.length === 0) {
       console.warn("No files provided for extraction");
-      return getSampleExtractionResult();
+      // We'll return an error message instead of sample data
+      throw new Error("No valid files were found for extraction. Please check the uploaded files and try again.");
     }
     
     console.log("Processing files:", filePaths);

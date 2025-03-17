@@ -260,15 +260,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Get file paths from storage
+        console.log("Valid files for extraction:", validFiles);
         filePaths = validFiles
           .filter(Boolean)
           .map(file => {
-            if (file && typeof file.path === 'string' && file.path.length > 0) {
-              return file.path;
+            console.log("Processing file for extraction:", file);
+            // Find the actual path - in memory storage often doesn't have the path property set
+            let realPath = file.path;
+            
+            // If path is missing but we have a filename, try to construct the path
+            if ((!realPath || realPath.length === 0) && file.filename) {
+              // Look for the file in the uploads directory
+              const possiblePath = `./uploads/${file.filename}`;
+              if (fs.existsSync(possiblePath)) {
+                console.log(`Found file at constructed path: ${possiblePath}`);
+                realPath = possiblePath;
+              } else {
+                // Try with the id as a fallback 
+                const possibleIdPath = `./uploads/${file.id}-${file.filename}`;
+                if (fs.existsSync(possibleIdPath)) {
+                  console.log(`Found file at alternate path: ${possibleIdPath}`);
+                  realPath = possibleIdPath;
+                }
+              }
             }
+            
+            if (realPath && realPath.length > 0) {
+              console.log(`Using file path for extraction: ${realPath}`);
+              return realPath;
+            }
+            
+            console.warn(`Could not determine path for file: ${file.filename}, id: ${file.id}`);
             return null;
           })
           .filter((path): path is string => path !== null);
+        
+        console.log(`File paths for extraction: ${JSON.stringify(filePaths)}`);
+        
+        // If we still don't have file paths but we have files, check for the actual uploaded location
+        if (filePaths.length === 0 && validFiles.length > 0) {
+          console.log("No file paths found, searching for alternate locations...");
+          // Check in attached_assets directory
+          try {
+            const files = fs.readdirSync('./attached_assets');
+            console.log("Files in attached_assets:", files);
+            
+            // Look for files that match our filenames
+            for (const validFile of validFiles) {
+              const filename = validFile.filename;
+              const matchingFile = files.find(f => f.includes(filename));
+              if (matchingFile) {
+                const fullPath = `./attached_assets/${matchingFile}`;
+                console.log(`Found matching file: ${fullPath}`);
+                filePaths.push(fullPath);
+              }
+            }
+          } catch (error) {
+            console.error("Error searching attached_assets:", error);
+          }
+        }
       }
       
       // Extract data using OpenAI
