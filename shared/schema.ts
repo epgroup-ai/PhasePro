@@ -2,6 +2,15 @@ import { pgTable, text, serial, integer, boolean, timestamp, json, numeric, fore
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Define CategoryManager schema at the top level
+export const categoryManagerSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  department: z.string(),
+});
+
+export type CategoryManager = z.infer<typeof categoryManagerSchema>;
+
 // User schema for local authentication
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -120,6 +129,14 @@ export const specSheetContentSchema = z.object({
   enquiry: z.custom<Enquiry>(),
   specifications: z.array(z.custom<ProductSpecification>()),
   generatedAt: z.string(),
+  categoryManager: categoryManagerSchema.optional(),
+  productCategoryAssignments: z.array(
+    z.object({
+      specificationId: z.number(),
+      productType: z.string(),
+      categoryManager: categoryManagerSchema
+    })
+  ).optional(),
 });
 
 export type SpecSheetContent = z.infer<typeof specSheetContentSchema>;
@@ -221,15 +238,6 @@ export const insertInvoiceItemSchema = createInsertSchema(invoiceItems).omit({
 
 export type InsertInvoiceItem = z.infer<typeof insertInvoiceItemSchema>;
 export type InvoiceItem = typeof invoiceItems.$inferSelect;
-
-// Category Manager schema
-export const categoryManagerSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  department: z.string(),
-});
-
-export type CategoryManager = z.infer<typeof categoryManagerSchema>;
 
 // Parsed Invoice schema for API responses
 export const parsedInvoiceSchema = z.object({

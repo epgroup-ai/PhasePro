@@ -13,7 +13,8 @@ import {
   extractionResultSchema,
   insertInvoiceSchema,
   insertInvoiceItemSchema,
-  parsedInvoiceSchema
+  parsedInvoiceSchema,
+  CategoryManager
 } from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";
@@ -558,6 +559,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const specs = await storage.getProductSpecificationsByEnquiryId(id);
       
+      // Import the category mapper
+      const { getCategoryManagerForProduct, getAllCategoryManagers } = await import('./lib/category-mapper');
+      
+      // Assign category managers to each product specification
+      const productCategoryAssignments = specs.map(spec => {
+        const categoryManager = getCategoryManagerForProduct(spec.productType);
+        return {
+          specificationId: spec.id,
+          productType: spec.productType,
+          categoryManager: categoryManager || getAllCategoryManagers()[0] // Default to first manager if none found
+        };
+      });
+      
+      // Find the primary category manager based on frequency of assignments
+      let primaryCategoryManager = null;
+      if (productCategoryAssignments.length > 0) {
+        // Count occurrences of each category manager
+        const managerCounts: Record<string, { count: number, manager: CategoryManager }> = {};
+        
+        productCategoryAssignments.forEach(assignment => {
+          const managerId = assignment.categoryManager.id;
+          if (!managerCounts[managerId]) {
+            managerCounts[managerId] = { count: 0, manager: assignment.categoryManager };
+          }
+          managerCounts[managerId].count++;
+        });
+        
+        // Find the most frequent category manager
+        let maxCount = 0;
+        Object.values(managerCounts).forEach(({ count, manager }) => {
+          if (count > maxCount) {
+            maxCount = count;
+            primaryCategoryManager = manager;
+          }
+        });
+      }
+      
       const specSheet = await storage.createSpecSheet({
         enquiryId: id,
         generatedBy: req.body.generatedBy || 'system',
@@ -565,6 +603,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           enquiry,
           specifications: specs,
           generatedAt: new Date().toISOString(),
+          categoryManager: primaryCategoryManager, // Primary category manager for the enquiry
+          productCategoryAssignments // Individual assignments for each product
         },
         version: 1,
       });
