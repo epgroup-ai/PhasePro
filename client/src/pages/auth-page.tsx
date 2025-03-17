@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Redirect, useLocation } from "wouter";
 import { useAuth } from "../hooks/use-auth";
+import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -30,6 +31,25 @@ export default function AuthPage() {
   // Debug the auth state
   console.log("Auth Page - User:", user);
   console.log("Auth Page - isLoading:", isLoading);
+  
+  // Test session state with fetch to the test endpoint
+  const testSession = async () => {
+    try {
+      console.log("Checking session status...");
+      const res = await fetch('/api/test', { credentials: 'include' });
+      const data = await res.json();
+      console.log("Session test result:", data);
+      return data;
+    } catch (error) {
+      console.error("Session test error:", error);
+      return { error: String(error) };
+    }
+  };
+  
+  // Call the test endpoint on component mount
+  React.useEffect(() => {
+    testSession();
+  }, []);
   
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),

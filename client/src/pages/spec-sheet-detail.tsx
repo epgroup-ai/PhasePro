@@ -182,9 +182,13 @@ export default function SpecSheetDetail() {
         
         {parsingError && (
           <p className="text-red-700 mb-2">
-            <strong>Content Parsing Error:</strong> {typeof parsingError === 'object' && parsingError !== null && 'message' in parsingError 
-              ? parsingError.message 
-              : String(parsingError)}
+            <strong>Content Parsing Error:</strong> {
+              typeof parsingError === 'object' && parsingError !== null && parsingError instanceof Error
+                ? parsingError.message 
+                : typeof parsingError === 'string'
+                  ? parsingError
+                  : JSON.stringify(parsingError)
+            }
           </p>
         )}
         

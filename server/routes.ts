@@ -988,11 +988,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Get a specific spec sheet by ID
   app.get('/api/spec-sheets/:id', requireAuth, async (req: Request, res: Response) => {
+    console.log(`GET /api/spec-sheets/${req.params.id} - Authentication Status:`, req.isAuthenticated());
+    console.log(`User in session:`, req.user ? `ID: ${req.user.id}, Username: ${req.user.username}` : 'No user');
+    console.log(`Session ID:`, req.sessionID);
+    
     try {
       const id = parseInt(req.params.id);
       
       if (isNaN(id)) {
         return res.status(400).json({ message: 'Invalid spec sheet ID' });
+      }
+      
+      // Extra authentication check
+      if (!req.isAuthenticated()) {
+        console.error(`Unauthenticated request to spec sheet ${id}`);
+        return res.status(401).json({ 
+          message: 'Authentication required to access specification sheets',
+          sessionInfo: {
+            hasSession: !!req.sessionID,
+            sessionID: req.sessionID
+          }
+        });
       }
       
       let specSheet;

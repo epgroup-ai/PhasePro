@@ -62,12 +62,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log("Login mutation started for:", credentials.username);
       console.log("Document cookies before login:", document.cookie);
       
+      // First check current auth status
+      try {
+        const checkRes = await fetch('/api/test', { credentials: 'include' });
+        const checkData = await checkRes.json();
+        console.log("Pre-login auth check:", checkData);
+      } catch (error) {
+        console.error("Error checking auth status before login:", error);
+      }
+      
       const res = await apiRequest("POST", "/api/login", credentials);
       console.log("Login response status:", res.status);
       console.log("Login response headers:", 
         Array.from(res.headers.entries()).map(([key, value]) => `${key}: ${value}`).join('\n')
       );
       console.log("Document cookies after login:", document.cookie);
+      
+      // Check auth status again after login
+      try {
+        const afterLoginCheck = await fetch('/api/test', { credentials: 'include' });
+        const afterLoginData = await afterLoginCheck.json();
+        console.log("Post-login auth check:", afterLoginData);
+      } catch (error) {
+        console.error("Error checking auth status after login:", error);
+      }
       
       const userData = await res.json();
       return userData;
