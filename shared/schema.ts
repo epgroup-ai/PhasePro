@@ -97,6 +97,7 @@ export const enquiries = pgTable("enquiries", {
   processedAt: timestamp("processed_at"),
   processedBy: text("processed_by"),
   processingTime: integer("processing_time"),
+  createdBy: integer("created_by").references(() => users.id),
 });
 
 export const insertEnquirySchema = createInsertSchema(enquiries).omit({
