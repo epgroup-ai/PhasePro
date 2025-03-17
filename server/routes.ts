@@ -55,11 +55,19 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const allowedTypes = [
+      'application/pdf', 
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // XLSX
+      'application/vnd.ms-excel', // XLS
+      'text/csv', // CSV files
+      'application/json' // JSON files
+    ];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only PDF and DOCX files are allowed.'));
+      console.warn(`Rejected file upload with mimetype: ${file.mimetype}`);
+      cb(new Error('Invalid file type. Allowed types: PDF, DOCX, Excel (XLS/XLSX), CSV, and JSON files.'));
     }
   },
 });

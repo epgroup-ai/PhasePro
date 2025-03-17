@@ -53,7 +53,14 @@ export default function FileUpload({ onFilesUploaded }: FileUploadProps) {
   );
 
   const validateFiles = (files: File[]): { valid: File[]; invalid: File[] } => {
-    const validTypes = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+    const validTypes = [
+      "application/pdf", 
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // DOCX
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // XLSX
+      "application/vnd.ms-excel", // XLS
+      "text/csv", // CSV
+      "application/json" // JSON
+    ];
     const maxSize = 10 * 1024 * 1024; // 10MB
 
     const valid: File[] = [];
@@ -63,6 +70,7 @@ export default function FileUpload({ onFilesUploaded }: FileUploadProps) {
       if (validTypes.includes(file.type) && file.size <= maxSize) {
         valid.push(file);
       } else {
+        console.warn(`Invalid file: ${file.name}, type: ${file.type}, size: ${file.size}`);
         invalid.push(file);
       }
     });
@@ -76,7 +84,7 @@ export default function FileUpload({ onFilesUploaded }: FileUploadProps) {
     if (invalid.length > 0) {
       toast({
         title: "Invalid files detected",
-        description: `${invalid.length} files were skipped. Only PDF and DOCX files up to 10MB are allowed.`,
+        description: `${invalid.length} files were skipped. Only PDF, DOCX, Excel (XLS/XLSX), CSV, and JSON files up to 10MB are allowed.`,
         variant: "destructive",
       });
 
@@ -188,14 +196,14 @@ export default function FileUpload({ onFilesUploaded }: FileUploadProps) {
                 type="file"
                 className="sr-only"
                 multiple
-                accept=".pdf,.docx,.doc"
+                accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.json"
                 onChange={handleFileInputChange}
                 disabled={isUploading}
               />
             </label>
             <p className="pl-1">or drag and drop</p>
           </div>
-          <p className="text-xs text-gray-500">PDF, DOCX up to 10MB</p>
+          <p className="text-xs text-gray-500">PDF, DOCX, Excel (XLSX, XLS), CSV, JSON up to 10MB</p>
         </div>
       )}
     </div>

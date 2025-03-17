@@ -2,9 +2,20 @@ import OpenAI from "openai";
 import fs from "fs";
 import { ExtractionResult } from "@shared/schema";
 import path from "path";
+// Import pdf-parse dynamically to avoid initialization issues
+const pdfParse = async (dataBuffer: Buffer) => {
+  // Dynamically import to avoid initialization test file issues
+  const pdfParseModule = await import('pdf-parse');
+  return pdfParseModule.default(dataBuffer);
+};
+import XLSX from "xlsx";
+import mammoth from "mammoth";
+import Anthropic from "@anthropic-ai/sdk";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "sk-dummy-key-for-development" });
+// Optional Anthropic integration
+const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }) : null;
 
 // Sample data for packaging boxes enquiry
 function getSampleExtractionResult(): ExtractionResult {
@@ -101,94 +112,183 @@ function getSampleLabelExtractionResult(): ExtractionResult {
 }
 
 /**
- * Extracts data from document files using OpenAI API
- * This function processes PDF, DOCX, and TXT files to extract enquiry information
- * 
- * @param filePaths Array of file paths to process
- * @returns Structured data extracted from the documents
+ * Extract text from a PDF file
+ * @param filePath Path to the PDF file
+ * @returns Extracted text content
  */
-export async function extractDocumentData(filePaths: string[]): Promise<ExtractionResult> {
+async function extractPdfText(filePath: string): Promise<string> {
   try {
-    // For development mode, check if we have an OpenAI key
-    if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === "sk-dummy-key-for-development") {
-      console.log("No valid OpenAI API key found. Using sample data for demo.");
+    const dataBuffer = fs.readFileSync(filePath);
+    const data = await pdfParse(dataBuffer);
+    return data.text;
+  } catch (error) {
+    console.error(`Error extracting PDF text from ${filePath}:`, error);
+    return `[Error extracting PDF: ${error.message}]`;
+  }
+}
+
+/**
+ * Extract text from a DOCX file
+ * @param filePath Path to the DOCX file
+ * @returns Extracted text content
+ */
+async function extractDocxText(filePath: string): Promise<string> {
+  try {
+    const result = await mammoth.extractRawText({ path: filePath });
+    return result.value;
+  } catch (error) {
+    console.error(`Error extracting DOCX text from ${filePath}:`, error);
+    return `[Error extracting DOCX: ${error.message}]`;
+  }
+}
+
+/**
+ * Extract data from Excel files (XLS/XLSX)
+ * @param filePath Path to the Excel file
+ * @returns Extracted content as text
+ */
+function extractExcelText(filePath: string): string {
+  try {
+    // Read the Excel file
+    const workbook = XLSX.readFile(filePath);
+    
+    // Process each sheet in the workbook
+    let result = '';
+    
+    workbook.SheetNames.forEach(sheetName => {
+      const worksheet = workbook.Sheets[sheetName];
       
-      // Check if we should use the sample for labels
-      const useLabelsSample = filePaths.some(p => p.includes('sample_enquiry_labels'));
+      // Convert sheet to JSON
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
       
-      if (useLabelsSample) {
-        return getSampleLabelExtractionResult();
-      } else {
-        return getSampleExtractionResult();
+      // Add sheet name
+      result += `Sheet: ${sheetName}\n`;
+      
+      // Convert JSON to formatted text
+      jsonData.forEach((row: any) => {
+        if (row && row.length > 0) {
+          result += row.join('\t') + '\n';
+        }
+      });
+      
+      result += '\n';
+    });
+    
+    return result;
+  } catch (error) {
+    console.error(`Error extracting Excel data from ${filePath}:`, error);
+    return `[Error extracting Excel: ${error.message}]`;
+  }
+}
+
+/**
+ * Process a file based on its extension and extract text content
+ * @param filePath Path to the file
+ * @returns Extracted text content
+ */
+async function processFile(filePath: string): Promise<string> {
+  // Check if this is a known sample file
+  if (filePath.includes('sample_enquiry_')) {
+    console.log("Reading sample file:", filePath);
+    return fs.readFileSync(filePath, 'utf-8');
+  }
+  
+  // Otherwise handle as regular upload based on file extension
+  const ext = path.extname(filePath).toLowerCase();
+  
+  switch (ext) {
+    case '.pdf':
+      console.log(`Processing PDF file: ${filePath}`);
+      return await extractPdfText(filePath);
+    
+    case '.docx':
+      console.log(`Processing DOCX file: ${filePath}`);
+      return await extractDocxText(filePath);
+    
+    case '.xlsx':
+    case '.xls':
+      console.log(`Processing Excel file: ${filePath}`);
+      return extractExcelText(filePath);
+    
+    case '.txt':
+    case '.csv':
+    case '.json':
+      console.log(`Processing text file: ${filePath}`);
+      return fs.readFileSync(filePath, 'utf-8');
+    
+    default:
+      console.warn(`Unsupported file format: ${ext} for ${filePath}`);
+      return `[Unsupported file format: ${ext}]`;
+  }
+}
+
+/**
+ * Process files using OpenAI or Claude API for document extraction
+ * @param text Document text to analyze
+ * @returns Structured extraction result
+ */
+async function processWithAI(text: string): Promise<ExtractionResult> {
+  console.log(`Processing document content with AI (content length: ${text.length} characters)`);
+  
+  // Prepare system prompt for either OpenAI or Claude
+  const systemPrompt = `You are an AI assistant that specializes in extracting structured information from packaging enquiry documents. 
+  Extract the following information in JSON format:
+  1. Customer name
+  2. Enquiry code/ID (if available, generate one in format ENQ-YYYY-XXXX if missing)
+  3. Contact person
+  4. Contact email
+  5. Date received (in YYYY-MM-DD format)
+  6. Deadline (in YYYY-MM-DD format, if available)
+  7. Product specifications (product type, dimensions, material, quantity, print type)
+  8. Special instructions
+  9. Delivery requirements
+  
+  For each product specification, provide a confidence score from 0-100.
+  For the overall extraction, provide an aiConfidence score from 0-100.
+  If information is missing or potentially incorrect, flag it with warnings.
+  Structure the response as a valid JSON object with "enquiry", "productSpecifications", "aiConfidence", and "warnings" fields.`;
+
+  try {
+    // Try with Anthropic's Claude if available
+    if (anthropic) {
+      try {
+        const claudeResponse = await anthropic.messages.create({
+          model: "claude-3-opus-20240229",
+          max_tokens: 4000,
+          system: systemPrompt,
+          messages: [
+            {
+              role: "user",
+              content: text
+            }
+          ],
+          temperature: 0.1
+        });
+        
+        const content = claudeResponse.content[0].text;
+        // Remove any markdown code block syntax if present
+        const cleanedContent = content.replace(/^```json\n|\n```$/g, '');
+        
+        return JSON.parse(cleanedContent);
+      } catch (claudeError) {
+        console.error("Error using Claude API, falling back to OpenAI:", claudeError);
+        // Fall through to OpenAI
       }
     }
     
-    console.log("Processing files:", filePaths);
-    
-    // Handle both uploaded files and sample files
-    const fileContents = await Promise.all(
-      filePaths.map(async (filePath) => {
-        try {
-          // Check if this is a known sample file
-          if (filePath.includes('sample_enquiry_')) {
-            console.log("Reading sample file:", filePath);
-            return fs.readFileSync(filePath, 'utf-8');
-          }
-          
-          // Otherwise handle as regular upload
-          const ext = path.extname(filePath).toLowerCase();
-          if (ext === '.pdf' || ext === '.docx' || ext === '.txt') {
-            // Read text content directly (in production we'd use specific parsers for each file type)
-            return fs.readFileSync(filePath, 'utf-8');
-          } else {
-            return `Contents of ${path.basename(filePath)}`;
-          }
-        } catch (error) {
-          console.error(`Error reading file ${filePath}:`, error);
-          
-          // If we can't read the file but it's a sample, try to use the static samples instead
-          if (filePath.includes('sample_enquiry_packaging_boxes')) {
-            return fs.readFileSync('./attached_assets/sample_enquiry_packaging_boxes.txt', 'utf-8');
-          } else if (filePath.includes('sample_enquiry_labels')) {
-            return fs.readFileSync('./attached_assets/sample_enquiry_labels.txt', 'utf-8');
-          }
-          
-          return `Unable to read ${path.basename(filePath)}`;
-        }
-      })
-    );
-
-    // Combine file contents for analysis
-    const combinedContent = fileContents.join('\n\n');
-
+    // Process with OpenAI
     console.log("Sending content to OpenAI for analysis...");
     
-    // Send the content to OpenAI for analysis
     const response = await openai.chat.completions.create({
       model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
       messages: [
         {
           role: "system",
-          content: `You are an AI assistant that specializes in extracting structured information from packaging enquiry documents. 
-          Extract the following information in JSON format:
-          1. Customer name
-          2. Enquiry code/ID (if available, generate one in format ENQ-YYYY-XXXX if missing)
-          3. Contact person
-          4. Contact email
-          5. Date received (in YYYY-MM-DD format)
-          6. Deadline (in YYYY-MM-DD format, if available)
-          7. Product specifications (product type, dimensions, material, quantity, print type)
-          8. Special instructions
-          9. Delivery requirements
-          
-          For each product specification, provide a confidence score from 0-100.
-          For the overall extraction, provide an aiConfidence score from 0-100.
-          If information is missing or potentially incorrect, flag it with warnings.
-          Structure the response as a valid JSON object with "enquiry", "productSpecifications", "aiConfidence", and "warnings" fields.`
+          content: systemPrompt
         },
         {
           role: "user",
-          content: combinedContent
+          content: text
         }
       ],
       response_format: { type: "json_object" },
@@ -205,17 +305,87 @@ export async function extractDocumentData(filePaths: string[]): Promise<Extracti
     console.log("Received response from OpenAI");
     
     // Parse and validate the JSON response
-    const result = JSON.parse(content);
-    return result;
+    return JSON.parse(content);
   } catch (error) {
-    console.error("Error in OpenAI extraction:", error);
-    
-    // Check if this is an API key issue
-    if (error instanceof Error && error.message.includes("API key")) {
-      console.error("Invalid or missing OpenAI API key");
+    console.error("Error in AI processing:", error);
+    throw error;
+  }
+}
+
+/**
+ * Extracts data from document files using OpenAI or Claude API
+ * This function processes PDF, DOCX, Excel and TXT files to extract enquiry information
+ * 
+ * @param filePaths Array of file paths to process
+ * @returns Structured data extracted from the documents
+ */
+export async function extractDocumentData(filePaths: string[]): Promise<ExtractionResult> {
+  try {
+    // For development mode with no API keys, return sample data
+    if ((!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === "sk-dummy-key-for-development") 
+        && !process.env.ANTHROPIC_API_KEY) {
+      console.log("No valid AI API keys found. Using sample data for demo.");
+      
+      // Check if we should use the sample for labels
+      const useLabelsSample = filePaths.some(p => p.includes('sample_enquiry_labels'));
+      
+      if (useLabelsSample) {
+        return getSampleLabelExtractionResult();
+      } else {
+        return getSampleExtractionResult();
+      }
     }
     
-    // Fall back to sample data if OpenAI fails
+    if (filePaths.length === 0) {
+      console.warn("No files provided for extraction");
+      return getSampleExtractionResult();
+    }
+    
+    console.log("Processing files:", filePaths);
+    
+    // Process each file and extract text content
+    const fileContentsPromises = filePaths.map(async (filePath) => {
+      try {
+        return await processFile(filePath);
+      } catch (error) {
+        console.error(`Error processing file ${filePath}:`, error);
+        
+        // Fall back to sample files if processing fails
+        if (filePath.includes('sample_enquiry_packaging_boxes')) {
+          return fs.readFileSync('./attached_assets/sample_enquiry_packaging_boxes.txt', 'utf-8');
+        } else if (filePath.includes('sample_enquiry_labels')) {
+          return fs.readFileSync('./attached_assets/sample_enquiry_labels.txt', 'utf-8');
+        }
+        
+        return `Unable to process ${path.basename(filePath)}: ${error.message}`;
+      }
+    });
+    
+    // Wait for all file processing to complete
+    const fileContents = await Promise.all(fileContentsPromises);
+    
+    // Combine file contents for analysis (limit to reasonable size)
+    const maxContentLength = 100000; // ~100KB limit for efficiency
+    let combinedContent = fileContents.join('\n\n===DOCUMENT BOUNDARY===\n\n');
+    
+    if (combinedContent.length > maxContentLength) {
+      console.log(`Content too large (${combinedContent.length} chars), truncating to ${maxContentLength} chars`);
+      combinedContent = combinedContent.substring(0, maxContentLength) + 
+        '\n\n[Content truncated due to size constraints. Please review original documents for complete information.]';
+    }
+    
+    // Process the combined content with AI
+    return await processWithAI(combinedContent);
+  } catch (error) {
+    console.error("Error in document extraction:", error);
+    
+    // Check if this is an API key issue
+    if (error instanceof Error && 
+       (error.message.includes("API key") || error.message.includes("authentication"))) {
+      console.error("API authentication error. Please check your API keys.");
+    }
+    
+    // Fall back to sample data if processing fails
     console.log("Using fallback sample data due to error");
     
     // Check if we should use the sample for labels
