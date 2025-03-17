@@ -22,12 +22,19 @@ interface SpecSheetViewerProps {
 
 export default function SpecSheetViewer({ specSheets }: SpecSheetViewerProps) {
   console.log("SpecSheetViewer received:", specSheets ? (Array.isArray(specSheets) ? specSheets.length : "non-array") : "undefined", "spec sheets");
-  if (specSheets?.length > 0) {
+  
+  // Safe content type checking with optional chaining
+  if (specSheets && Array.isArray(specSheets) && specSheets.length > 0 && specSheets[0]) {
     console.log("First spec sheet content type:", typeof specSheets[0].content);
-    console.log("First spec sheet content preview:", 
-      typeof specSheets[0].content === 'string' 
-        ? specSheets[0].content.substring(0, 100) 
-        : JSON.stringify(specSheets[0].content).substring(0, 100));
+    
+    // Safe content preview with conditional checks
+    const content = specSheets[0].content;
+    if (content) {
+      console.log("First spec sheet content preview:", 
+        typeof content === 'string' 
+          ? content.substring(0, 100) 
+          : JSON.stringify(content).substring(0, 100));
+    }
   }
   
   const [open, setOpen] = useState(false);

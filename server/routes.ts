@@ -791,7 +791,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all invoices
   app.get('/api/invoices', requireAuth, async (req: Request, res: Response) => {
     try {
-      const invoices = await storage.getAllInvoices();
+      const userId = req.user?.id;
+      const isAdmin = req.user?.role === 'admin';
+      
+      // If admin, get all invoices, otherwise only get invoices uploaded by the user
+      const invoices = await storage.getAllInvoices(isAdmin ? undefined : userId);
       res.json(invoices);
     } catch (err) {
       handleError(err, res);
@@ -806,6 +810,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!invoice) {
         return res.status(404).json({ message: 'Invoice not found' });
+      }
+      
+      // Check if user has access to this invoice
+      const userId = req.user?.id;
+      const isAdmin = req.user?.role === 'admin';
+      
+      // Only allow access if user is admin or invoice uploader
+      if (!isAdmin && invoice.uploadedBy !== userId) {
+        return res.status(403).json({ message: 'Access denied: You do not have permission to view this invoice' });
       }
       
       const items = await storage.getInvoiceItems(id);
@@ -827,6 +840,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!invoice) {
         return res.status(404).json({ message: 'Invoice not found' });
+      }
+      
+      // Check if user has access to this invoice
+      const userId = req.user?.id;
+      const isAdmin = req.user?.role === 'admin';
+      
+      // Only allow access if user is admin or invoice uploader
+      if (!isAdmin && invoice.uploadedBy !== userId) {
+        return res.status(403).json({ message: 'Access denied: You do not have permission to update this invoice' });
       }
       
       const updateData = insertInvoiceSchema.partial().parse(req.body);

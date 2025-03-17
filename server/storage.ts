@@ -393,8 +393,15 @@ export class MemStorage implements IStorage {
     );
   }
 
-  async getAllInvoices(): Promise<Invoice[]> {
-    return Array.from(this.invoices.values());
+  async getAllInvoices(userId?: number): Promise<Invoice[]> {
+    const allInvoices = Array.from(this.invoices.values());
+    
+    // If userId is provided, filter by uploadedBy
+    if (userId !== undefined) {
+      return allInvoices.filter(invoice => invoice.uploadedBy === userId);
+    }
+    
+    return allInvoices;
   }
 
   async getInvoicesByAssignee(assigneeId: string): Promise<Invoice[]> {
@@ -822,9 +829,16 @@ export class DatabaseStorage implements IStorage {
     return result[0] || undefined;
   }
 
-  async getAllInvoices(): Promise<Invoice[]> {
-    const result = await this.db.select().from(invoices);
-    return result;
+  async getAllInvoices(userId?: number): Promise<Invoice[]> {
+    if (userId !== undefined) {
+      // User-specific invoices
+      const result = await this.db.select().from(invoices).where(eq(invoices.uploadedBy, userId));
+      return result;
+    } else {
+      // All invoices (admin)
+      const result = await this.db.select().from(invoices);
+      return result;
+    }
   }
 
   async getInvoicesByAssignee(assigneeId: string): Promise<Invoice[]> {
