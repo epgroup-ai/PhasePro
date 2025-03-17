@@ -98,6 +98,10 @@ export const enquiries = pgTable("enquiries", {
   processedBy: text("processed_by"),
   processingTime: integer("processing_time"),
   createdBy: integer("created_by").references(() => users.id),
+  // Category manager assignment fields
+  assignedTo: text("assigned_to"),
+  assignedToName: text("assigned_to_name"),
+  assignedToDepartment: text("assigned_to_department"),
 });
 
 export const insertEnquirySchema = createInsertSchema(enquiries).omit({
