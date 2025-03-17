@@ -380,12 +380,29 @@ export default function SpecSheetViewer({ specSheets, enquiryId }: SpecSheetView
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>
-              {compareMode ? "Compare Specification Sheets" : "Specification Sheet"}
-            </DialogTitle>
-            <DialogDescription>
-              {selectedSheet && formatDate(selectedSheet.generatedAt)}
-            </DialogDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle>
+                  {compareMode ? "Compare Specification Sheets" : "Specification Sheet"}
+                </DialogTitle>
+                <DialogDescription>
+                  {selectedSheet && formatDate(selectedSheet.generatedAt)}
+                </DialogDescription>
+              </div>
+              {selectedSheet && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    setOpen(false);
+                    setLocation(`/spec-sheet/${selectedSheet.id}`);
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Open Full View
+                </Button>
+              )}
+            </div>
           </DialogHeader>
           
           {selectedSheet && (

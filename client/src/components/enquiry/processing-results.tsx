@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { SaveIcon, SendIcon } from "lucide-react";
+import { useLocation } from "wouter";
 
 interface ProcessingResultsProps {
   result: {
@@ -21,6 +22,7 @@ export default function ProcessingResults({ result }: ProcessingResultsProps) {
   const [enquiry, setEnquiry] = useState(result.enquiry);
   const [specifications, setSpecifications] = useState(result.specifications);
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const generateSpecSheetMutation = useMutation({
     mutationFn: async () => {
@@ -35,8 +37,15 @@ export default function ProcessingResults({ result }: ProcessingResultsProps) {
       toast({
         title: "Spec Sheet Generated",
         description: `Spec sheet version ${data.version} has been created successfully.`,
-        variant: "success",
+        variant: "default",
       });
+      
+      // Redirect to the spec sheet detail page
+      if (data && data.id) {
+        setTimeout(() => {
+          setLocation(`/spec-sheet/${data.id}`);
+        }, 500); // Short delay to allow toast to be visible
+      }
     },
     onError: (error) => {
       toast({
