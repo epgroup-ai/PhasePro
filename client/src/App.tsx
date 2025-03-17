@@ -10,6 +10,7 @@ import Settings from "@/pages/settings";
 import AuthPage from "@/pages/auth-page";
 import WebSocketTestPage from "@/pages/websocket-test-page";
 import DebugAuthPage from "@/pages/debug-auth";
+import AISpecTest from "@/pages/ai-spec-test";
 import Header from "@/components/layout/header";
 import NavigationTabs from "@/components/layout/navigation-tabs";
 import Footer from "@/components/layout/footer";
@@ -118,6 +119,9 @@ function AuthenticatedRoutes() {
           </Route>
           <Route path="/debug-auth">
             <DebugAuthPage />
+          </Route>
+          <Route path="/ai-spec-test">
+            <AISpecTest />
           </Route>
           <Route path="/auth">
             <AuthPage />
