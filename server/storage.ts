@@ -66,6 +66,7 @@ export interface IStorage {
 
   // Invoice Item methods
   createInvoiceItem(item: InsertInvoiceItem): Promise<InvoiceItem>;
+  getInvoiceItem(id: number): Promise<InvoiceItem | undefined>;
   getInvoiceItems(invoiceId: number): Promise<InvoiceItem[]>;
   updateInvoiceItem(id: number, data: Partial<InsertInvoiceItem>): Promise<InvoiceItem>;
   deleteInvoiceItem(id: number): Promise<void>;
@@ -450,6 +451,10 @@ export class MemStorage implements IStorage {
     
     this.invoiceItems.set(id, item);
     return item;
+  }
+
+  async getInvoiceItem(id: number): Promise<InvoiceItem | undefined> {
+    return this.invoiceItems.get(id);
   }
 
   async getInvoiceItems(invoiceId: number): Promise<InvoiceItem[]> {
@@ -871,6 +876,11 @@ export class DatabaseStorage implements IStorage {
     }).returning();
     
     return result[0];
+  }
+
+  async getInvoiceItem(id: number): Promise<InvoiceItem | undefined> {
+    const result = await this.db.select().from(invoiceItems).where(eq(invoiceItems.id, id)).limit(1);
+    return result[0] || undefined;
   }
 
   async getInvoiceItems(invoiceId: number): Promise<InvoiceItem[]> {

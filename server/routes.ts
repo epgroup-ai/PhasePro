@@ -875,10 +875,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/invoice-items/:id', requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      const items = await storage.getInvoiceItems(id);
+      const item = await storage.getInvoiceItem(id);
       
-      if (items.length === 0) {
+      if (!item) {
         return res.status(404).json({ message: 'Invoice item not found' });
+      }
+      
+      // Get the parent invoice to check permissions
+      const invoice = await storage.getInvoice(item.invoiceId);
+      
+      if (!invoice) {
+        return res.status(404).json({ message: 'Parent invoice not found' });
+      }
+      
+      // Check if user has access to this invoice's items
+      const userId = req.user?.id;
+      const isAdmin = req.user?.role === 'admin';
+      
+      // Only allow access if user is admin or invoice uploader
+      if (!isAdmin && invoice.uploadedBy !== userId) {
+        return res.status(403).json({ message: 'Access denied: You do not have permission to update this invoice item' });
       }
       
       const updateData = insertInvoiceItemSchema.partial().parse(req.body);
