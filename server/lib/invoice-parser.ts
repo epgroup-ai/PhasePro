@@ -1,7 +1,8 @@
 import OpenAI from "openai";
 import fs from "fs";
 import path from "path";
-import { CategoryManager } from "@shared/schema";
+import { CategoryManager } from "./category-mapping";
+import { CategoryManager as SchemaManager } from "@shared/schema";
 import { getCategoryManager } from "./category-mapping";
 import { getCategoryManagerForProduct } from "./category-mapper";
 
@@ -132,7 +133,7 @@ export async function parseInvoiceDocument(filePath: string): Promise<ParsedInvo
       
       return {
         ...item,
-        categoryManager,
+        categoryManager: categoryManager || undefined, // Important: Use undefined instead of null for compatibility
         category: categoryManager?.department || 'Unassigned'
       };
     });

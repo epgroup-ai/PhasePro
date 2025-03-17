@@ -156,14 +156,18 @@ export const extractionResultSchema = z.object({
   enquiry: z.object({
     customerName: z.string(),
     enquiryCode: z.string(),
-    contactPerson: z.string().optional(),
-    contactEmail: z.string().optional().nullable().transform(val => 
+    contactPerson: z.string().nullable().optional().transform(val => 
       (!val || val === "" || val === "undefined") ? null : val
     ),
-    dateReceived: z.string(),
-    deadline: z.string().optional(),
-    specialInstructions: z.string().optional(),
-    deliveryRequirements: z.string().optional(),
+    contactEmail: z.string().nullable().optional().transform(val => 
+      (!val || val === "" || val === "undefined") ? null : val
+    ),
+    dateReceived: z.string().nullable().optional().transform(val => 
+      (!val) ? new Date().toISOString() : val
+    ),
+    deadline: z.string().nullable().optional(),
+    specialInstructions: z.string().nullable().optional(),
+    deliveryRequirements: z.string().nullable().optional(),
   }),
   productSpecifications: z.array(
     z.object({
