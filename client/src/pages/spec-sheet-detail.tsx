@@ -41,39 +41,76 @@ export default function SpecSheetDetail() {
   
   // Parse the content if it's a string
   let content = null;
-  try {
-    console.log("Spec sheet content type:", typeof specSheet?.content);
-    if (specSheet?.content) {
+  let parsingError = null;
+  
+  const parseContent = () => {
+    try {
+      console.log("Spec sheet:", specSheet ? "found" : "not found");
+      console.log("Spec sheet ID:", specSheet?.id);
+      console.log("Content type:", typeof specSheet?.content);
+      
+      // If there's no content at all, return default structure
+      if (!specSheet?.content) {
+        console.warn("No content available in spec sheet");
+        return { enquiry: {}, specifications: [], productCategoryAssignments: [] };
+      }
+      
+      // Handle different content types
+      let parsedContent;
       if (typeof specSheet.content === 'string') {
-        console.log("Parsing string content, first 100 chars:", specSheet.content.substring(0, 100));
-        content = JSON.parse(specSheet.content);
+        try {
+          // Try to parse as JSON string
+          console.log("Attempting to parse string content");
+          const contentSample = specSheet.content.substring(0, 200);
+          console.log("Content sample:", contentSample);
+          parsedContent = JSON.parse(specSheet.content);
+        } catch (parseErr) {
+          console.error("JSON parsing failed:", parseErr);
+          // If parse fails, it might already be an object encoded as string for some reason
+          // Try to return it as an object directly
+          return { 
+            enquiry: {}, 
+            specifications: [], 
+            productCategoryAssignments: [],
+            rawContent: specSheet.content.substring(0, 500) // For debugging
+          };
+        }
       } else {
-        console.log("Using object content directly");
-        content = specSheet.content;
+        // Content is already an object
+        console.log("Content is already an object");
+        parsedContent = specSheet.content;
       }
       
-      // Ensure content structure is valid by using safe access methods
-      if (content && !content.enquiry) {
-        console.error("Missing enquiry data in spec sheet content");
-        content = { ...content, enquiry: {} };
-      }
+      // Ensure we have all expected fields with defaults
+      const validatedContent = {
+        enquiry: parsedContent.enquiry || {},
+        specifications: Array.isArray(parsedContent.specifications) 
+          ? parsedContent.specifications 
+          : [],
+        productCategoryAssignments: Array.isArray(parsedContent.productCategoryAssignments)
+          ? parsedContent.productCategoryAssignments
+          : [],
+        categoryManager: parsedContent.categoryManager || null,
+        generatedAt: parsedContent.generatedAt || specSheet.generatedAt
+      };
       
-      if (content && !content.specifications) {
-        console.error("Missing specifications in spec sheet content");
-        content = { ...content, specifications: [] };
-      }
-
-      // Debug content structure
-      console.log("Content keys:", content ? Object.keys(content) : "no content");
-      console.log("Content.enquiry keys:", content?.enquiry ? Object.keys(content.enquiry) : "no enquiry");
-      console.log("Content.specifications length:", content?.specifications ? content.specifications.length : 0);
-      console.log("Content.productCategoryAssignments:", content?.productCategoryAssignments ? 
-        `${content.productCategoryAssignments.length} items` : "none");
+      // Debug what we've got
+      console.log("Content validation completed:");
+      console.log("- Enquiry keys:", Object.keys(validatedContent.enquiry));
+      console.log("- Specs count:", validatedContent.specifications.length);
+      console.log("- Assignments count:", validatedContent.productCategoryAssignments.length);
+      console.log("- Has category manager:", !!validatedContent.categoryManager);
+      
+      return validatedContent;
+    } catch (error) {
+      console.error("Fatal error in content parsing:", error);
+      parsingError = error;
+      return { enquiry: {}, specifications: [], productCategoryAssignments: [] };
     }
-  } catch (error) {
-    console.error("Error parsing spec sheet content:", error);
-    content = { enquiry: {}, specifications: [], productCategoryAssignments: [] };
-  }
+  };
+  
+  // Execute the parsing
+  content = parseContent();
 
   // Extract product category assignments safely
   const productAssignments = safeGetContentValue(content, 'productCategoryAssignments', []);
@@ -105,13 +142,43 @@ export default function SpecSheetDetail() {
     );
   }
 
-  if (error || !data) {
+  if (error || !data || parsingError) {
     return (
       <div className="p-6 bg-red-50 border border-red-200 rounded-lg">
         <h2 className="text-xl font-semibold text-red-800 mb-2">Error Loading Specification Sheet</h2>
-        <p className="text-red-700">
-          {error ? error.message : "Specification sheet not found. It may have been deleted or the ID is invalid."}
-        </p>
+        
+        {error && (
+          <p className="text-red-700 mb-2">
+            <strong>API Error:</strong> {error.message}
+          </p>
+        )}
+        
+        {parsingError && (
+          <p className="text-red-700 mb-2">
+            <strong>Content Parsing Error:</strong> {parsingError instanceof Error ? parsingError.message : String(parsingError)}
+          </p>
+        )}
+        
+        {!error && !parsingError && !data && (
+          <p className="text-red-700 mb-2">
+            Specification sheet not found. It may have been deleted or the ID is invalid.
+          </p>
+        )}
+        
+        {/* Debug information if needed */}
+        {specSheet && (
+          <div className="mt-3 p-3 bg-red-100 text-xs font-mono overflow-auto max-h-32 rounded">
+            <p className="font-semibold">Debug Information:</p>
+            <p>Spec Sheet ID: {specSheet.id}</p>
+            <p>Content Type: {typeof specSheet.content}</p>
+            <p>Generated At: {specSheet.generatedAt ? new Date(specSheet.generatedAt).toString() : 'N/A'}</p>
+            <p>Version: {specSheet.version}</p>
+            {typeof specSheet.content === 'string' && (
+              <p>Content Sample: {specSheet.content.substring(0, 100)}...</p>
+            )}
+          </div>
+        )}
+        
         <Button 
           variant="outline" 
           className="mt-4"

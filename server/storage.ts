@@ -305,9 +305,23 @@ export class MemStorage implements IStorage {
     const id = this.specSheetCurrentId++;
     
     // Always ensure content is stored as a JSON string to match how database would handle it
-    const contentToStore = typeof insertSpecSheet.content === 'string' 
-      ? insertSpecSheet.content 
-      : JSON.stringify(insertSpecSheet.content);
+    let contentToStore;
+    try {
+      contentToStore = typeof insertSpecSheet.content === 'string' 
+        ? insertSpecSheet.content 
+        : JSON.stringify(insertSpecSheet.content);
+      
+      console.log(`Successfully formatted content for spec sheet #${id}`);
+    } catch (error) {
+      console.error('Error stringifying spec sheet content:', error);
+      // Fallback to an empty structure if JSON stringification fails
+      contentToStore = JSON.stringify({
+        enquiry: {},
+        specifications: [],
+        productCategoryAssignments: [],
+        error: "Error processing original content"
+      });
+    }
     
     // Create the spec sheet with properly formatted content
     const specSheet: SpecSheet = { 
@@ -318,13 +332,21 @@ export class MemStorage implements IStorage {
     };
     
     console.log(`Created spec sheet #${id} with content type: ${typeof contentToStore}`);
+    console.log(`Content preview: ${typeof contentToStore === 'string' ? contentToStore.substring(0, 50) + '...' : 'not a string'}`);
     
     this.specSheets.set(id, specSheet);
     return specSheet;
   }
 
   async getSpecSheet(id: number): Promise<SpecSheet | undefined> {
-    return this.specSheets.get(id);
+    const specSheet = this.specSheets.get(id);
+    if (!specSheet) {
+      return undefined;
+    }
+    
+    // Return a deep copy to prevent mutations
+    const copy = { ...specSheet };
+    return copy;
   }
 
   async getSpecSheetsByEnquiryId(enquiryId: number): Promise<SpecSheet[]> {
