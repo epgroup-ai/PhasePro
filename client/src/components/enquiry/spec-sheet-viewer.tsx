@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { SpecSheet, Enquiry, ProductSpecification, SpecSheetContent } from "@shared/schema";
 import {
   Dialog,
@@ -14,14 +14,28 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Printer, Download, EyeIcon, BarChart3, FileIcon, ArrowLeftRight } from "lucide-react";
+import { FileText, Printer, Download, EyeIcon, BarChart3, FileIcon, ArrowLeftRight, Users } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import wsClient, { CursorPosition, ActiveUser } from "@/lib/websocket-client";
 
 interface SpecSheetViewerProps {
   specSheets: SpecSheet[] | undefined;
+  enquiryId?: number;
 }
 
-export default function SpecSheetViewer({ specSheets }: SpecSheetViewerProps) {
+export default function SpecSheetViewer({ specSheets, enquiryId }: SpecSheetViewerProps) {
   console.log("SpecSheetViewer received:", specSheets ? (Array.isArray(specSheets) ? specSheets.length : "non-array") : "undefined", "spec sheets");
+  
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const specSheetRef = useRef<HTMLDivElement>(null);
+
+  // WebSocket states
+  const [connected, setConnected] = useState(false);
+  const [activeUsers, setActiveUsers] = useState<ActiveUser[]>([]);
+  const [cursorPositions, setCursorPositions] = useState<CursorPosition[]>([]);
+  const [collaborationEnabled, setCollaborationEnabled] = useState(false);
   
   // Safe content type checking with optional chaining
   if (specSheets && Array.isArray(specSheets) && specSheets.length > 0 && specSheets[0]) {
@@ -42,6 +56,93 @@ export default function SpecSheetViewer({ specSheets }: SpecSheetViewerProps) {
   const [compareMode, setCompareMode] = useState(false);
   const [compareSheets, setCompareSheets] = useState<Array<SpecSheet & { content: SpecSheetContent }>>([]);
   const [activeTab, setActiveTab] = useState<string>("preview");
+  
+  // WebSocket setup and cleanup
+  useEffect(() => {
+    wsClient.connect();
+    
+    // Set up event listeners
+    const connectionListener = (data: { connected: boolean }) => {
+      setConnected(data.connected);
+      
+      if (data.connected) {
+        toast({
+          title: "Connected to collaboration server",
+          description: "You can now collaborate with others in real-time",
+        });
+      } else {
+        toast({
+          title: "Disconnected from server",
+          description: "Trying to reconnect...",
+          variant: "destructive",
+        });
+      }
+    };
+    
+    const usersListener = (data: { users: ActiveUser[] }) => {
+      setActiveUsers(data.users);
+    };
+    
+    const cursorsListener = (data: CursorPosition[]) => {
+      setCursorPositions(data);
+    };
+    
+    // Add event listeners
+    const removeConnectionListener = wsClient.addListener("connection", connectionListener);
+    const removeUsersListener = wsClient.addListener("users", usersListener);
+    const removeCursorsListener = wsClient.addListener("cursorPositions", cursorsListener);
+    
+    // Setup cursor tracking if collaboration is enabled
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!collaborationEnabled || !selectedSheet || !user) return;
+      
+      const container = specSheetRef.current;
+      if (!container) return;
+      
+      const rect = container.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      // Only update if position changed significantly (avoid spamming)
+      wsClient.updateCursorPosition({
+        x,
+        y,
+        specId: selectedSheet.id,
+      });
+    };
+    
+    if (collaborationEnabled && specSheetRef.current) {
+      specSheetRef.current.addEventListener("mousemove", handleMouseMove);
+    }
+    
+    // Cleanup function
+    return () => {
+      removeConnectionListener();
+      removeUsersListener();
+      removeCursorsListener();
+      
+      if (collaborationEnabled && specSheetRef.current) {
+        specSheetRef.current?.removeEventListener("mousemove", handleMouseMove);
+      }
+      
+      // Leave the spec sheet room if we're in one
+      if (selectedSheet) {
+        wsClient.leaveSpecSheet(selectedSheet.id);
+      }
+    };
+  }, [collaborationEnabled, selectedSheet, user]);
+  
+  // Join the collaboration room when a spec sheet is selected
+  useEffect(() => {
+    if (selectedSheet && user && collaborationEnabled) {
+      wsClient.joinSpecSheet(selectedSheet.id, user.id, user.username || user.fullName || `User ${user.id}`);
+      
+      // Set up the initial connection
+      if (!connected) {
+        wsClient.connect();
+      }
+    }
+  }, [selectedSheet, user, collaborationEnabled, connected]);
 
   // Sort spec sheets by generation date (newest first)
   const sortedSheets = specSheets ? [...specSheets].sort((a, b) => {
@@ -228,45 +329,118 @@ export default function SpecSheetViewer({ specSheets }: SpecSheetViewerProps) {
           
           {selectedSheet && (
             <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <Tabs 
-                  defaultValue={activeTab} 
-                  className="w-full" 
-                  onValueChange={setActiveTab}
-                >
-                  <TabsList>
-                    <TabsTrigger value="preview">
-                      <EyeIcon className="h-4 w-4 mr-2" />
-                      Preview
-                    </TabsTrigger>
-                    <TabsTrigger value="table">
-                      <BarChart3 className="h-4 w-4 mr-2" />
-                      Table View
-                    </TabsTrigger>
-                    {compareSheets.length > 1 && (
-                      <TabsTrigger value="compare">
-                        <ArrowLeftRight className="h-4 w-4 mr-2" />
-                        Compare
+              <div className="flex flex-col space-y-4">
+                <div className="flex justify-between items-center">
+                  <Tabs 
+                    defaultValue={activeTab} 
+                    className="w-full" 
+                    onValueChange={setActiveTab}
+                  >
+                    <TabsList>
+                      <TabsTrigger value="preview">
+                        <EyeIcon className="h-4 w-4 mr-2" />
+                        Preview
                       </TabsTrigger>
-                    )}
-                  </TabsList>
-                </Tabs>
-                
-                <div className="flex space-x-2">
-                  <Button variant="outline" size="sm" onClick={handlePrintSpecSheet}>
-                    <Printer className="h-4 w-4 mr-2" />
-                    Print
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handleExportPDF}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Export PDF
-                  </Button>
+                      <TabsTrigger value="table">
+                        <BarChart3 className="h-4 w-4 mr-2" />
+                        Table View
+                      </TabsTrigger>
+                      {compareSheets.length > 1 && (
+                        <TabsTrigger value="compare">
+                          <ArrowLeftRight className="h-4 w-4 mr-2" />
+                          Compare
+                        </TabsTrigger>
+                      )}
+                    </TabsList>
+                  </Tabs>
+                  
+                  <div className="flex space-x-2">
+                    <Button 
+                      variant={collaborationEnabled ? "default" : "outline"} 
+                      size="sm" 
+                      onClick={() => setCollaborationEnabled(!collaborationEnabled)}
+                    >
+                      <Users className="h-4 w-4 mr-2" />
+                      {collaborationEnabled ? "Collaboration On" : "Enable Collaboration"}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handlePrintSpecSheet}>
+                      <Printer className="h-4 w-4 mr-2" />
+                      Print
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleExportPDF}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Export PDF
+                    </Button>
+                  </div>
                 </div>
+                
+                {/* Show active collaborators when collaboration is enabled */}
+                {collaborationEnabled && activeUsers.length > 0 && (
+                  <div className="bg-gray-50 p-2 rounded border">
+                    <div className="text-sm font-medium mb-1 flex items-center">
+                      <Users className="h-4 w-4 mr-1 text-blue-500" />
+                      Active Collaborators
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {activeUsers.map((user) => (
+                        <div 
+                          key={user.userId} 
+                          className="flex items-center text-xs px-2 py-1 rounded-full" 
+                          style={{ backgroundColor: `${user.color}20`, color: user.color }}
+                        >
+                          <div 
+                            className="w-2 h-2 rounded-full mr-1" 
+                            style={{ backgroundColor: user.color }}
+                          ></div>
+                          {user.userName}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               
               <Tabs defaultValue={activeTab} value={activeTab}>
                 <TabsContent value="preview" className="mt-0">
-                  <div className="border rounded-md p-6 bg-white" id="spec-sheet-printable">
+                  <div 
+                    ref={specSheetRef}
+                    className="border rounded-md p-6 bg-white relative" 
+                    id="spec-sheet-printable"
+                  >
+                    {/* Render other users' cursors */}
+                    {collaborationEnabled && cursorPositions.map((cursor) => {
+                      if (cursor.userId === user?.id) return null; // Don't show own cursor
+                      return (
+                        <div 
+                          key={cursor.userId}
+                          className="absolute pointer-events-none z-10 flex flex-col items-start"
+                          style={{ 
+                            left: `${cursor.x}px`, 
+                            top: `${cursor.y}px`,
+                            transition: 'left 0.2s, top 0.2s' 
+                          }}
+                        >
+                          <div
+                            className="w-4 h-4 mb-1 transform -translate-x-1/2"
+                            style={{
+                              borderLeft: `10px solid transparent`,
+                              borderRight: `10px solid transparent`,
+                              borderBottom: `10px solid ${cursor.color}`,
+                            }}
+                          />
+                          <span 
+                            className="text-xs px-2 py-1 rounded whitespace-nowrap"
+                            style={{ 
+                              backgroundColor: cursor.color, 
+                              color: 'white', 
+                              transform: 'translateX(-50%)',
+                            }}
+                          >
+                            {cursor.userName}
+                          </span>
+                        </div>
+                      );
+                    })}
                     <div className="text-center mb-6">
                       <h1 className="text-2xl font-bold">Product Specification Sheet</h1>
                       <p className="text-gray-500">Reference: {safeGetContentValue(selectedSheet, 'content.enquiry.enquiryCode', 'N/A')}</p>
