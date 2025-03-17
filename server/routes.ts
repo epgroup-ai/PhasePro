@@ -36,19 +36,23 @@ interface MulterRequest extends ExpressRequest {
   files?: Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] };
 }
 
-// Set up multer for file uploads with temporary storage
+// Set up multer for file uploads with consistent storage
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
-      const tempDir = path.join(os.tmpdir(), 'enquiry-uploads');
-      if (!fs.existsSync(tempDir)) {
-        fs.mkdirSync(tempDir, { recursive: true });
+      // Store files in a consistent location in the project directory
+      const uploadDir = './uploads';
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
       }
-      cb(null, tempDir);
+      console.log(`Storing file in directory: ${uploadDir}`);
+      cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      cb(null, uniqueSuffix + '-' + file.originalname);
+      const filename = uniqueSuffix + '-' + file.originalname;
+      console.log(`Generated filename for upload: ${filename}`);
+      cb(null, filename);
     }
   }),
   limits: {
@@ -198,21 +202,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const files = Array.isArray(multerReq.files) ? multerReq.files : [];
+      console.log("Received files for upload:", files.map(f => ({ name: f.originalname, path: f.path, size: f.size })));
+      
       const uploadedFiles = await Promise.all(
         files.map(async (file: Express.Multer.File) => {
+          // Make sure we save the file path in the database record
           const uploadedFile = await storage.saveFile({
             enquiryId: null,
             filename: file.originalname,
             contentType: file.mimetype,
             size: file.size,
+            path: file.path  // Save the actual path to find the file later
           });
+          
+          console.log(`Saved file to database: id=${uploadedFile.id}, path=${uploadedFile.path || file.path}`);
           
           return {
             id: uploadedFile.id,
             filename: uploadedFile.filename,
             contentType: uploadedFile.contentType,
             size: uploadedFile.size,
-            path: file.path,
+            path: uploadedFile.path || file.path,
           };
         })
       );

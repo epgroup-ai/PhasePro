@@ -123,7 +123,7 @@ async function extractPdfText(filePath: string): Promise<string> {
     return data.text;
   } catch (error) {
     console.error(`Error extracting PDF text from ${filePath}:`, error);
-    return `[Error extracting PDF: ${error.message}]`;
+    return `[Error extracting PDF: ${error instanceof Error ? error.message : String(error)}]`;
   }
 }
 
@@ -138,7 +138,7 @@ async function extractDocxText(filePath: string): Promise<string> {
     return result.value;
   } catch (error) {
     console.error(`Error extracting DOCX text from ${filePath}:`, error);
-    return `[Error extracting DOCX: ${error.message}]`;
+    return `[Error extracting DOCX: ${error instanceof Error ? error.message : String(error)}]`;
   }
 }
 
@@ -306,7 +306,15 @@ async function processWithAI(text: string): Promise<ExtractionResult> {
           temperature: 0.1
         });
         
-        const content = claudeResponse.content[0].text;
+        // Handle different response formats from Claude API
+        let content = '';
+        if (claudeResponse.content[0] && 'text' in claudeResponse.content[0]) {
+          content = claudeResponse.content[0].text as string;
+        } else if (claudeResponse.content[0]) {
+          // Handle other potential formats
+          content = JSON.stringify(claudeResponse.content[0]);
+        }
+        
         // Remove any markdown code block syntax if present
         const cleanedContent = content.replace(/^```json\n|\n```$/g, '');
         
@@ -399,7 +407,7 @@ export async function extractDocumentData(filePaths: string[]): Promise<Extracti
           return fs.readFileSync('./attached_assets/sample_enquiry_labels.txt', 'utf-8');
         }
         
-        return `Unable to process ${path.basename(filePath)}: ${error.message}`;
+        return `Unable to process ${path.basename(filePath)}: ${error instanceof Error ? error.message : String(error)}`;
       }
     });
     
