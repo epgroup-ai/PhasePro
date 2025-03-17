@@ -276,8 +276,13 @@ export class MemStorage implements IStorage {
     );
   }
 
-  async getAllEnquiries(): Promise<Enquiry[]> {
-    return Array.from(this.enquiries.values());
+  async getAllEnquiries(userId?: number): Promise<Enquiry[]> {
+    if (userId === undefined) {
+      return Array.from(this.enquiries.values());
+    }
+    return Array.from(this.enquiries.values()).filter(enquiry => 
+      enquiry.createdBy === userId
+    );
   }
 
   async updateEnquiry(id: number, data: Partial<InsertEnquiry>): Promise<Enquiry> {
@@ -724,8 +729,14 @@ export class DatabaseStorage implements IStorage {
     return result[0] || undefined;
   }
 
-  async getAllEnquiries(): Promise<Enquiry[]> {
-    const result = await this.db.select().from(enquiries);
+  async getAllEnquiries(userId?: number): Promise<Enquiry[]> {
+    if (userId === undefined) {
+      // Admin access - return all enquiries
+      const result = await this.db.select().from(enquiries);
+      return result;
+    }
+    // User access - return only their enquiries
+    const result = await this.db.select().from(enquiries).where(eq(enquiries.createdBy, userId));
     return result;
   }
 

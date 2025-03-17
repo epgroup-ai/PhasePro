@@ -408,6 +408,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           processedAt: new Date(),
           processingTime,
           specialInstructions: validatedData.enquiry.specialInstructions || null,
+          createdBy: req.user?.id,
           deliveryRequirements: validatedData.enquiry.deliveryRequirements || null,
         });
       } catch (validationError) {
@@ -430,6 +431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           processingTime,
           specialInstructions: extractionResult.enquiry?.specialInstructions || null,
           deliveryRequirements: extractionResult.enquiry?.deliveryRequirements || null,
+          createdBy: req.user?.id,
         });
         
         // If validation failed, create a basic product spec structure
@@ -477,7 +479,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all enquiries
   app.get('/api/enquiries', requireAuth, async (req: Request, res: Response) => {
     try {
-      const enquiries = await storage.getAllEnquiries();
+      const userId = req.user?.id;
+      const isAdmin = req.user?.role === 'admin';
+      
+      // If admin, return all enquiries, otherwise only return the user's enquiries
+      const enquiries = await storage.getAllEnquiries(isAdmin ? undefined : userId);
       res.json(enquiries);
     } catch (err) {
       handleError(err, res);
@@ -492,6 +498,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!enquiry) {
         return res.status(404).json({ message: 'Enquiry not found' });
+      }
+      
+      // Check if user has access to this enquiry
+      const userId = req.user?.id;
+      const isAdmin = req.user?.role === 'admin';
+      
+      // Only allow access if the user is an admin or the enquiry creator
+      if (!isAdmin && enquiry.createdBy !== userId) {
+        return res.status(403).json({ message: 'Access denied: You do not have permission to view this enquiry' });
       }
       
       const specs = await storage.getProductSpecificationsByEnquiryId(id);
@@ -517,6 +532,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!enquiry) {
         return res.status(404).json({ message: 'Enquiry not found' });
+      }
+      
+      // Check if user has access to this enquiry
+      const userId = req.user?.id;
+      const isAdmin = req.user?.role === 'admin';
+      
+      // Only allow access if the user is an admin or the enquiry creator
+      if (!isAdmin && enquiry.createdBy !== userId) {
+        return res.status(403).json({ message: 'Access denied: You do not have permission to update this enquiry' });
       }
       
       const updateData = insertEnquirySchema.partial().parse(req.body);
