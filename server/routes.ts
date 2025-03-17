@@ -986,6 +986,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize WebSocket server for real-time collaboration
   const collaborationServer = new CollaborationServer(httpServer);
   
+  // Get all spec sheets (without ID)
+  app.get('/api/spec-sheets', requireAuth, async (req: Request, res: Response) => {
+    console.log(`GET /api/spec-sheets - Authentication Status:`, req.isAuthenticated());
+    console.log(`User in session:`, req.user ? `ID: ${req.user.id}, Username: ${req.user.username}` : 'No user');
+    
+    try {
+      // Add filter by enquiryId if provided in query params
+      const enquiryId = req.query.enquiryId ? Number(req.query.enquiryId) : undefined;
+      
+      let specSheets;
+      if (enquiryId) {
+        specSheets = await storage.getSpecSheetsByEnquiryId(enquiryId);
+      } else {
+        // For now, this is not implemented in storage interface
+        // This would need proper implementation in DatabaseStorage
+        specSheets = [];
+      }
+      
+      return res.json(specSheets);
+    } catch (error) {
+      console.error('Error fetching spec sheets:', error);
+      return res.status(500).json({
+        message: 'Error retrieving spec sheets',
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
   // Get a specific spec sheet by ID
   app.get('/api/spec-sheets/:id', requireAuth, async (req: Request, res: Response) => {
     console.log(`GET /api/spec-sheets/${req.params.id} - Authentication Status:`, req.isAuthenticated());

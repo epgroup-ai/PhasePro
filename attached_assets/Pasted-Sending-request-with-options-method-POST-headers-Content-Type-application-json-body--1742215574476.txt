@@ -1,0 +1,163 @@
+Sending request with options: {"method":"POST","headers":{"Content-Type":"application/json"},"body":"{\"fileIds\":[38]}","credentials":"include"}
+queryClient.ts:27 Response received: 200 OK
+processing-results.tsx:29 Generating spec sheet for enquiry ID: 53
+queryClient.ts:15 API Request: POST /api/enquiries/53/generate-spec-sheet {generatedBy: 'user'}
+queryClient.ts:25 Sending request with options: {"method":"POST","headers":{"Content-Type":"application/json"},"body":"{\"generatedBy\":\"user\"}","credentials":"include"}
+queryClient.ts:27 Response received: 200 OK
+processing-results.tsx:36 Response from spec sheet generation: {id: 28, specSheet: {…}, enquiry: {…}, categoryManager: {…}}
+spec-sheet-detail.tsx:55 Spec sheet: not found
+spec-sheet-detail.tsx:56 Spec sheet ID: undefined
+spec-sheet-detail.tsx:57 Content type: undefined
+spec-sheet-detail.tsx:61 No content available in spec sheet
+parseContent @ spec-sheet-detail.tsx:61
+SpecSheetDetail @ spec-sheet-detail.tsx:128
+renderWithHooks @ chunk-RPCDYKBN.js?v=60eea7b5:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=60eea7b5:14926
+beginWork @ chunk-RPCDYKBN.js?v=60eea7b5:15914
+beginWork$1 @ chunk-RPCDYKBN.js?v=60eea7b5:19753
+performUnitOfWork @ chunk-RPCDYKBN.js?v=60eea7b5:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=60eea7b5:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=60eea7b5:19116
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=60eea7b5:18874
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=60eea7b5:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=60eea7b5:18627
+setTimeout
+onSuccess @ processing-results.tsx:48
+execute @ @tanstack_react-query.js?v=60eea7b5:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=60eea7b5:2630
+(anonymous) @ @tanstack_react-query.js?v=60eea7b5:3295
+handleGenerateSpecSheet @ processing-results.tsx:108
+callCallback2 @ chunk-RPCDYKBN.js?v=60eea7b5:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=60eea7b5:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=60eea7b5:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=60eea7b5:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=60eea7b5:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=60eea7b5:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=60eea7b5:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=60eea7b5:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=60eea7b5:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=60eea7b5:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=60eea7b5:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=60eea7b5:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=60eea7b5:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=60eea7b5:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=60eea7b5:5449Understand this warningAI
+queryClient.ts:52 Query request: GET /api/spec-sheets
+queryClient.ts:59 Query response: 200 OK
+queryClient.ts:82 Query failed for /api/spec-sheets: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+(anonymous) @ queryClient.ts:82
+await in (anonymous)
+fetchFn @ @tanstack_react-query.js?v=60eea7b5:840
+run @ @tanstack_react-query.js?v=60eea7b5:494
+start @ @tanstack_react-query.js?v=60eea7b5:536
+fetch @ @tanstack_react-query.js?v=60eea7b5:926
+executeFetch_fn @ @tanstack_react-query.js?v=60eea7b5:2211
+onSubscribe @ @tanstack_react-query.js?v=60eea7b5:1898
+subscribe @ @tanstack_react-query.js?v=60eea7b5:24
+(anonymous) @ @tanstack_react-query.js?v=60eea7b5:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=60eea7b5:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=60eea7b5:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=60eea7b5:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=60eea7b5:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=60eea7b5:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=60eea7b5:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=60eea7b5:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=60eea7b5:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=60eea7b5:19416
+commitRoot @ chunk-RPCDYKBN.js?v=60eea7b5:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=60eea7b5:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=60eea7b5:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=60eea7b5:18627
+setTimeout
+onSuccess @ processing-results.tsx:48
+execute @ @tanstack_react-query.js?v=60eea7b5:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=60eea7b5:2630
+(anonymous) @ @tanstack_react-query.js?v=60eea7b5:3295
+handleGenerateSpecSheet @ processing-results.tsx:108
+callCallback2 @ chunk-RPCDYKBN.js?v=60eea7b5:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=60eea7b5:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=60eea7b5:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=60eea7b5:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=60eea7b5:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=60eea7b5:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=60eea7b5:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=60eea7b5:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=60eea7b5:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=60eea7b5:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=60eea7b5:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=60eea7b5:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=60eea7b5:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=60eea7b5:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=60eea7b5:5449Understand this errorAI
+spec-sheet-detail.tsx:55 Spec sheet: not found
+spec-sheet-detail.tsx:56 Spec sheet ID: undefined
+spec-sheet-detail.tsx:57 Content type: undefined
+spec-sheet-detail.tsx:61 No content available in spec sheet
+parseContent @ spec-sheet-detail.tsx:61
+SpecSheetDetail @ spec-sheet-detail.tsx:128
+renderWithHooks @ chunk-RPCDYKBN.js?v=60eea7b5:11548
+updateFunctionComponent @ chunk-RPCDYKBN.js?v=60eea7b5:14582
+beginWork @ chunk-RPCDYKBN.js?v=60eea7b5:15924
+beginWork$1 @ chunk-RPCDYKBN.js?v=60eea7b5:19753
+performUnitOfWork @ chunk-RPCDYKBN.js?v=60eea7b5:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=60eea7b5:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=60eea7b5:19116
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=60eea7b5:18874
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=60eea7b5:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=60eea7b5:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=60eea7b5:555
+flush @ @tanstack_react-query.js?v=60eea7b5:569
+batch @ @tanstack_react-query.js?v=60eea7b5:587
+dispatch_fn @ @tanstack_react-query.js?v=60eea7b5:996
+onError @ @tanstack_react-query.js?v=60eea7b5:861
+reject @ @tanstack_react-query.js?v=60eea7b5:465
+(anonymous) @ @tanstack_react-query.js?v=60eea7b5:508
+Promise.catch
+run @ @tanstack_react-query.js?v=60eea7b5:498
+start @ @tanstack_react-query.js?v=60eea7b5:536
+fetch @ @tanstack_react-query.js?v=60eea7b5:926
+executeFetch_fn @ @tanstack_react-query.js?v=60eea7b5:2211
+onSubscribe @ @tanstack_react-query.js?v=60eea7b5:1898
+subscribe @ @tanstack_react-query.js?v=60eea7b5:24
+(anonymous) @ @tanstack_react-query.js?v=60eea7b5:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=60eea7b5:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=60eea7b5:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=60eea7b5:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=60eea7b5:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=60eea7b5:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=60eea7b5:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=60eea7b5:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=60eea7b5:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=60eea7b5:19416
+commitRoot @ chunk-RPCDYKBN.js?v=60eea7b5:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=60eea7b5:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=60eea7b5:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=60eea7b5:18627
+setTimeout
+onSuccess @ processing-results.tsx:48
+execute @ @tanstack_react-query.js?v=60eea7b5:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=60eea7b5:2630
+(anonymous) @ @tanstack_react-query.js?v=60eea7b5:3295
+handleGenerateSpecSheet @ processing-results.tsx:108
+callCallback2 @ chunk-RPCDYKBN.js?v=60eea7b5:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=60eea7b5:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=60eea7b5:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=60eea7b5:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=60eea7b5:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=60eea7b5:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=60eea7b5:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=60eea7b5:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=60eea7b5:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=60eea7b5:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=60eea7b5:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=60eea7b5:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=60eea7b5:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=60eea7b5:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=60eea7b5:5449Understand this warningAI
+spec-sheet-detail.tsx:55 Spec sheet: not found
+spec-sheet-detail.tsx:56 Spec sheet ID: undefined
+spec-sheet-detail.tsx:57 Content type: undefined
