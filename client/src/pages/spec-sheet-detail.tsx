@@ -114,7 +114,7 @@ export default function SpecSheetDetail() {
           {enquiryId && (
             <Button
               variant="outline"
-              onClick={() => setLocation(`/enquiry/${enquiryId}`)}
+              onClick={() => setLocation(`/enquiries/${enquiryId}`)}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Enquiry

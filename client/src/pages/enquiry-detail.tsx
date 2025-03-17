@@ -52,15 +52,21 @@ export default function EnquiryDetail() {
       // Refetch the enquiry data to get the new spec sheet
       queryClient.invalidateQueries({ queryKey: ['/api/enquiries', parseInt(id)] });
       
+      // Log the data coming back from the API
+      console.log('Spec sheet generation response:', data);
+      
       toast({
         title: "Spec sheet generated",
-        description: "The specification sheet has been created successfully.",
+        description: `Spec sheet has been created successfully. ID: ${data.specSheet?.id || 'unknown'}`,
       });
       
       // Navigate to the newly created spec sheet page
       if (data && data.specSheet && data.specSheet.id) {
+        console.log('Redirecting to spec sheet:', data.specSheet.id);
         // Redirect to a page that shows categorization details
         setLocation(`/spec-sheet/${data.specSheet.id}`);
+      } else {
+        console.error('Cannot redirect - missing spec sheet ID in response:', data);
       }
     },
     onError: (error) => {
@@ -103,8 +109,25 @@ export default function EnquiryDetail() {
     updateEnquiryMutation.mutate(data as Partial<Enquiry>);
   };
   
-  const handleGenerateSpecSheet = () => {
-    generateSpecSheetMutation.mutate();
+  const handleGenerateSpecSheet = async () => {
+    try {
+      const result = await generateSpecSheetMutation.mutateAsync();
+      console.log("Generate spec sheet result:", result);
+      
+      // Force navigation to the spec sheet detail page
+      if (result && result.specSheet && result.specSheet.id) {
+        setLocation(`/spec-sheet/${result.specSheet.id}`);
+      } else {
+        console.error("No spec sheet ID found in response:", result);
+        // Get the most recent spec sheet for this enquiry and navigate to it
+        if (specSheets && specSheets.length > 0) {
+          const latestSheet = specSheets[specSheets.length - 1];
+          setLocation(`/spec-sheet/${latestSheet.id}`);
+        }
+      }
+    } catch (error) {
+      console.error("Error generating spec sheet:", error);
+    }
     
     // Display toast with loading animation
     toast({
