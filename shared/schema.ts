@@ -98,8 +98,8 @@ export const enquiries = pgTable("enquiries", {
   processedBy: text("processed_by"),
   processingTime: integer("processing_time"),
   createdBy: integer("created_by").references(() => users.id),
-  // Category manager assignment fields
-  assignedTo: text("assigned_to"),
+  // Category manager assignment fields - these are text fields to match the string IDs from the managers
+  assignedTo: text("assigned_to"), // This needs to be text for string IDs like "SF", "JH", etc.
   assignedToName: text("assigned_to_name"),
   assignedToDepartment: text("assigned_to_department"),
 });
@@ -207,7 +207,8 @@ export const invoices = pgTable("invoices", {
   taxAmount: numeric("tax_amount"),
   uploadedBy: integer("uploaded_by"),
   uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
-  assignedTo: text("assigned_to"),
+  // Category manager assignment fields - using text fields for string IDs
+  assignedTo: text("assigned_to"), // String ID like "SF", "JH", etc.
   assignedToName: text("assigned_to_name"),
   assignedToDepartment: text("assigned_to_department"),
   processedAt: timestamp("processed_at"),
@@ -236,7 +237,8 @@ export const invoiceItems = pgTable("invoice_items", {
   unitPrice: numeric("unit_price").notNull(),
   totalPrice: numeric("total_price").notNull(),
   category: text("category"),
-  categoryManagerId: text("category_manager_id"),
+  // Category manager fields - using text for string IDs
+  categoryManagerId: text("category_manager_id"), // String ID like "SF", "JH", etc.
   categoryManagerName: text("category_manager_name"),
   categoryManagerDepartment: text("category_manager_department"),
 });
