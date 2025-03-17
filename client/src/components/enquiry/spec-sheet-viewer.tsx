@@ -157,31 +157,55 @@ export default function SpecSheetViewer({ specSheets, enquiryId }: SpecSheetView
 
   // Helper function to map spec sheets to properly typed objects
   const mapSpecSheet = (sheet: SpecSheet): SpecSheet & { content: SpecSheetContent } => {
+    console.log('mapSpecSheet called with sheet:', sheet);
+    console.log('Content type:', typeof sheet.content);
+    
     // Handle both string and object content formats
     let parsedContent: SpecSheetContent;
     
     if (typeof sheet.content === 'string') {
       try {
+        console.log('Attempting to parse string content...');
         parsedContent = JSON.parse(sheet.content) as unknown as SpecSheetContent;
+        console.log('Successfully parsed string content:', parsedContent);
       } catch (error) {
         console.error('Error parsing spec sheet content:', error);
-        // Provide empty default content if parsing fails
-        parsedContent = {
-          enquiry: {} as any,
-          specifications: [],
-          generatedAt: new Date().toISOString(),
-        };
+        
+        // Try to sanitize and parse content if it might be double-encoded
+        try {
+          const sanitized = sheet.content.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+          console.log('Attempting with sanitized content...');
+          parsedContent = JSON.parse(sanitized) as unknown as SpecSheetContent;
+          console.log('Successfully parsed sanitized content');
+        } catch (e) {
+          console.error('Failed to parse even after sanitizing:', e);
+          // Provide empty default content if parsing fails
+          parsedContent = {
+            enquiry: {} as any,
+            specifications: [],
+            generatedAt: new Date().toISOString(),
+          };
+        }
       }
+    } else if (sheet.content === null) {
+      console.error('Sheet content is null!');
+      parsedContent = {
+        enquiry: {} as any,
+        specifications: [],
+        generatedAt: new Date().toISOString(),
+      };
     } else {
+      console.log('Content is not a string, using as is');
       parsedContent = sheet.content as unknown as SpecSheetContent;
     }
     
-    console.log('Parsed spec sheet content:', parsedContent);
-    
-    return {
+    const result = {
       ...sheet,
       content: parsedContent
     };
+    console.log('Returning mapped sheet:', result);
+    
+    return result;
   };
   
   // We'll use this function to safely check content in the UI
@@ -200,11 +224,38 @@ export default function SpecSheetViewer({ specSheets, enquiryId }: SpecSheetView
   };
   
   const handleViewSpecSheet = (sheet: SpecSheet) => {
-    setSelectedSheet(mapSpecSheet(sheet));
-    setCompareMode(false);
-    setCompareSheets([]);
-    setActiveTab("preview");
-    setOpen(true);
+    console.log("Viewing spec sheet:", sheet);
+    
+    try {
+      // Parse content if it's a string
+      if (typeof sheet.content === 'string') {
+        console.log("Parsing spec sheet content (string)");
+        try {
+          const parsedContent = JSON.parse(sheet.content);
+          console.log("Successfully parsed spec sheet content:", parsedContent);
+        } catch (error) {
+          console.error("Failed to parse spec sheet content:", error);
+        }
+      } else {
+        console.log("Spec sheet content is not a string:", typeof sheet.content);
+      }
+      
+      const mappedSheet = mapSpecSheet(sheet);
+      console.log("Mapped sheet:", mappedSheet);
+      
+      setSelectedSheet(mappedSheet);
+      setCompareMode(false);
+      setCompareSheets([]);
+      setActiveTab("preview");
+      setOpen(true);
+    } catch (error) {
+      console.error("Error in handleViewSpecSheet:", error);
+      toast({
+        title: "Error",
+        description: "Failed to process spec sheet. See console for details.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handlePrintSpecSheet = () => {

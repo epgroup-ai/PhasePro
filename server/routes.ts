@@ -482,8 +482,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user?.id;
       const isAdmin = req.user?.role === 'admin';
       
+      // Debug log to trace the issue with filtering
+      console.log(`GET /api/enquiries - User ID: ${userId}, Is Admin: ${isAdmin}`);
+      
       // If admin, return all enquiries, otherwise only return the user's enquiries
       const enquiries = await storage.getAllEnquiries(isAdmin ? undefined : userId);
+      
+      console.log(`Returning ${enquiries.length} enquiries to user ${userId}`);
+      
       res.json(enquiries);
     } catch (err) {
       handleError(err, res);
