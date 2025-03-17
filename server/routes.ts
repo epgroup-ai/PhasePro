@@ -990,14 +990,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/spec-sheets/:id', requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      const specSheet = await storage.getSpecSheet(id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Invalid spec sheet ID' });
+      }
+      
+      let specSheet;
+      try {
+        specSheet = await storage.getSpecSheet(id);
+      } catch (fetchErr) {
+        console.error(`Error fetching spec sheet ID ${id}:`, fetchErr);
+        return res.status(500).json({ 
+          message: 'Error retrieving spec sheet', 
+          details: fetchErr instanceof Error ? fetchErr.message : String(fetchErr)
+        });
+      }
       
       if (!specSheet) {
         return res.status(404).json({ message: 'Spec sheet not found' });
       }
       
       // Get the associated enquiry to check permissions
-      const enquiry = await storage.getEnquiry(specSheet.enquiryId);
+      let enquiry;
+      try {
+        enquiry = await storage.getEnquiry(specSheet.enquiryId);
+      } catch (enquiryErr) {
+        console.error(`Error fetching enquiry for spec sheet ${id}:`, enquiryErr);
+        return res.status(500).json({ 
+          message: 'Error retrieving associated enquiry', 
+          details: enquiryErr instanceof Error ? enquiryErr.message : String(enquiryErr)
+        });
+      }
       
       if (!enquiry) {
         return res.status(404).json({ message: 'Associated enquiry not found' });
@@ -1012,8 +1035,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Access denied: You do not have permission to view this spec sheet' });
       }
       
+      // Validate spec sheet content before returning
+      if (!specSheet.content) {
+        console.warn(`Spec sheet ${id} has no content`);
+        specSheet.content = JSON.stringify({
+          enquiry: {},
+          specifications: [],
+          productCategoryAssignments: [],
+          error: "No content available in spec sheet"
+        });
+      }
+      
       res.json({ specSheet });
     } catch (err) {
+      console.error('Unexpected error in spec sheet retrieval:', err);
       handleError(err, res);
     }
   });

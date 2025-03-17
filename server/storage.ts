@@ -339,14 +339,66 @@ export class MemStorage implements IStorage {
   }
 
   async getSpecSheet(id: number): Promise<SpecSheet | undefined> {
-    const specSheet = this.specSheets.get(id);
-    if (!specSheet) {
-      return undefined;
+    try {
+      if (isNaN(id) || id <= 0) {
+        throw new Error(`Invalid spec sheet ID: ${id}`);
+      }
+      
+      const specSheet = this.specSheets.get(id);
+      if (!specSheet) {
+        return undefined;
+      }
+      
+      // Make a deep copy to prevent mutations
+      const copy: SpecSheet = {
+        ...specSheet,
+        // Ensure generatedAt is a valid Date object
+        generatedAt: specSheet.generatedAt instanceof Date ? 
+          new Date(specSheet.generatedAt.getTime()) : 
+          new Date()
+      };
+      
+      // Handle content - ensure it's valid
+      if (typeof copy.content === 'string') {
+        try {
+          // Validate content by parsing and stringifying (tests if valid JSON)
+          const parsed = JSON.parse(copy.content);
+          
+          // Sanitize dates in the parsed content if any exist
+          if (parsed.enquiry && parsed.enquiry.dateReceived && !(parsed.enquiry.dateReceived instanceof Date)) {
+            try {
+              parsed.enquiry.dateReceived = new Date(parsed.enquiry.dateReceived);
+            } catch (dateErr) {
+              console.warn(`Invalid date in spec sheet ${id} content:`, dateErr);
+              parsed.enquiry.dateReceived = new Date();
+            }
+          }
+          
+          // Re-stringify to ensure consistent format
+          copy.content = JSON.stringify(parsed);
+        } catch (contentErr) {
+          console.error(`Error processing spec sheet ${id} content:`, contentErr);
+          copy.content = JSON.stringify({
+            enquiry: {},
+            specifications: [],
+            productCategoryAssignments: [],
+            error: "Invalid content format: " + (contentErr instanceof Error ? contentErr.message : String(contentErr))
+          });
+        }
+      } else if (copy.content === null || copy.content === undefined) {
+        copy.content = JSON.stringify({
+          enquiry: {},
+          specifications: [],
+          productCategoryAssignments: [],
+          error: "No content available"
+        });
+      }
+      
+      return copy;
+    } catch (err) {
+      console.error(`Error in getSpecSheet(${id}):`, err);
+      throw err;
     }
-    
-    // Return a deep copy to prevent mutations
-    const copy = { ...specSheet };
-    return copy;
   }
 
   async getSpecSheetsByEnquiryId(enquiryId: number): Promise<SpecSheet[]> {
