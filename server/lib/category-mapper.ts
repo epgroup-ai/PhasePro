@@ -175,7 +175,7 @@ export function getCategoryManagerForProduct(productType: string, additionalDeta
   const keywordGroups = [
     // Paper Bags (E)
     {
-      keywords: ['KRAFT BAG', 'PAPER BAG', 'KRAFT PAPER', 'CARDBOARD BOX', 'PAPER SACK'],
+      keywords: ['KRAFT BAG', 'PAPER BAG', 'KRAFT PAPER', 'CARDBOARD BOX', 'PAPER SACK', 'CAKE BOX'],
       manager: categoryManagerMap['E']
     },
     // Plastic Bags (D)
@@ -185,7 +185,11 @@ export function getCategoryManagerForProduct(productType: string, additionalDeta
     },
     // Catering (B)
     {
-      keywords: ['FOOD CONTAINER', 'CUTLERY', 'CUP', 'PLATE', 'BOWL', 'STRAW', 'CATERING', 'TABLEWARE', 'FOIL CONTAINER'],
+      keywords: [
+        'FOOD CONTAINER', 'CUTLERY', 'CUP', 'PLATE', 'BOWL', 'STRAW', 'CATERING', 'TABLEWARE', 'FOIL CONTAINER',
+        'PIZZA BOX', 'TOGO BOX', 'TO GO BOX', 'CAKE BOX', 'BREADSTICK BOX', 'DOLCINI BOX', 'BEVERAGE CARRIER',
+        'CATERING BOX', 'WHOLE CAKE BOX', 'FLATBREAD TOGO', 'PICNIC'
+      ],
       manager: categoryManagerMap['B']
     },
     // E-commerce (C)
@@ -222,7 +226,12 @@ export function getCategoryManagerForProduct(productType: string, additionalDeta
     'SHIP': categoryManagerMap['C'],
     'PACK': categoryManagerMap['C'],
     'LABEL': categoryManagerMap['A'],
-    'RETAIL': categoryManagerMap['A']
+    'RETAIL': categoryManagerMap['A'],
+    'BOX': categoryManagerMap['E'], // Add boxes to paper products by default
+    'CAKE': categoryManagerMap['B'], // Add cake boxes to food category
+    'TOGO': categoryManagerMap['B'], // Add ToGo boxes to food category
+    'BEVERAGE': categoryManagerMap['B'], // Add beverage carriers to food category
+    'PIZZA': categoryManagerMap['B']  // Add pizza boxes to food category
   };
   
   for (const [keyword, manager] of Object.entries(fallbackKeywords)) {
