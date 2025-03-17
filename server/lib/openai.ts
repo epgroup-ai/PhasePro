@@ -149,35 +149,76 @@ async function extractDocxText(filePath: string): Promise<string> {
  */
 function extractExcelText(filePath: string): string {
   try {
-    // Read the Excel file
-    const workbook = XLSX.readFile(filePath);
+    console.log(`Reading Excel file: ${filePath}`);
+    
+    // Read the Excel file with proper options for binary format
+    const workbook = XLSX.readFile(filePath, {
+      type: 'binary',
+      cellDates: true,
+      cellNF: false,
+      cellText: false
+    });
+    
+    if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
+      console.error("Invalid Excel workbook structure:", workbook);
+      return "[Error: Invalid Excel file structure]";
+    }
+    
+    console.log(`Excel file contains ${workbook.SheetNames.length} sheets: ${workbook.SheetNames.join(', ')}`);
     
     // Process each sheet in the workbook
     let result = '';
     
-    workbook.SheetNames.forEach(sheetName => {
+    workbook.SheetNames.forEach((sheetName, index) => {
+      console.log(`Processing sheet ${index + 1}/${workbook.SheetNames.length}: ${sheetName}`);
+      
       const worksheet = workbook.Sheets[sheetName];
+      if (!worksheet) {
+        console.error(`Sheet ${sheetName} is invalid or empty`);
+        result += `Sheet: ${sheetName} (Empty or invalid)\n\n`;
+        return;
+      }
       
-      // Convert sheet to JSON
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      // Convert sheet to JSON with header mapping
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+        header: 1, 
+        defval: "",  // Default empty string for missing cells
+        blankrows: false  // Skip blank rows
+      });
       
-      // Add sheet name
+      // Add sheet name and header
       result += `Sheet: ${sheetName}\n`;
       
       // Convert JSON to formatted text
-      jsonData.forEach((row: any) => {
-        if (row && row.length > 0) {
-          result += row.join('\t') + '\n';
-        }
-      });
+      if (jsonData && jsonData.length > 0) {
+        jsonData.forEach((row: any, rowIndex: number) => {
+          if (row && Array.isArray(row)) {
+            // Format and join cells with tabs
+            const formattedRow = row.map((cell: any) => {
+              // Handle different cell types
+              if (cell === null || cell === undefined) return "";
+              if (cell instanceof Date) return cell.toISOString().split('T')[0]; // Format date as YYYY-MM-DD
+              return String(cell).trim();
+            });
+            
+            result += formattedRow.join('\t') + '\n';
+          } else if (row) {
+            // Handle non-array rows (should not happen with header:1)
+            result += JSON.stringify(row) + '\n';
+          }
+        });
+      } else {
+        result += "[Empty sheet]\n";
+      }
       
       result += '\n';
     });
     
+    console.log(`Successfully extracted ${result.length} characters from Excel file`);
     return result;
   } catch (error) {
     console.error(`Error extracting Excel data from ${filePath}:`, error);
-    return `[Error extracting Excel: ${error.message}]`;
+    return `[Error extracting Excel: ${error instanceof Error ? error.message : String(error)}]`;
   }
 }
 
