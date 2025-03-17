@@ -302,7 +302,9 @@ async function processWithAI(text: string): Promise<ExtractionResult> {
   For each product specification, provide a confidence score from 0-100.
   For the overall extraction, provide an aiConfidence score from 0-100.
   If information is missing or potentially incorrect, flag it with warnings.
-  Structure the response as a valid JSON object with "enquiry", "productSpecifications", "aiConfidence", and "warnings" fields.`;
+  Structure the response as a valid JSON object with "enquiry", "productSpecifications", "aiConfidence", and "warnings" fields.
+  
+  IMPORTANT: All product specification fields (productType, dimensions, material, quantity, printType) must be strings.`;
 
   try {
     // Try with Anthropic's Claude if available
@@ -333,7 +335,9 @@ async function processWithAI(text: string): Promise<ExtractionResult> {
         // Remove any markdown code block syntax if present
         const cleanedContent = content.replace(/^```json\n|\n```$/g, '');
         
-        return JSON.parse(cleanedContent);
+        // Parse the JSON and ensure all fields are properly formatted
+        const parsedData = JSON.parse(cleanedContent);
+        return sanitizeExtractionResult(parsedData);
       } catch (claudeError) {
         console.error("Error using Claude API, falling back to OpenAI:", claudeError);
         // Fall through to OpenAI
@@ -368,12 +372,62 @@ async function processWithAI(text: string): Promise<ExtractionResult> {
 
     console.log("Received response from OpenAI");
     
-    // Parse and validate the JSON response
-    return JSON.parse(content);
+    // Parse, sanitize and validate the JSON response
+    const parsedData = JSON.parse(content);
+    return sanitizeExtractionResult(parsedData);
   } catch (error) {
     console.error("Error in AI processing:", error);
     throw error;
   }
+}
+
+/**
+ * Sanitize the extraction result to ensure all fields have the correct types
+ * @param data The parsed extraction result data
+ * @returns Sanitized extraction result
+ */
+function sanitizeExtractionResult(data: any): ExtractionResult {
+  // Ensure the structure exists
+  if (!data.enquiry) data.enquiry = {};
+  if (!data.productSpecifications) data.productSpecifications = [];
+  if (!Array.isArray(data.warnings)) data.warnings = [];
+  
+  // Ensure aiConfidence is a number
+  data.aiConfidence = typeof data.aiConfidence === 'number' ? data.aiConfidence : 
+                    (typeof data.aiConfidence === 'string' ? parseFloat(data.aiConfidence) : 70);
+  
+  // Process product specifications to ensure all values are strings
+  data.productSpecifications = data.productSpecifications.map((spec: any) => {
+    return {
+      productType: String(spec.productType || ''),
+      dimensions: String(spec.dimensions || ''),
+      material: String(spec.material || ''),
+      quantity: String(spec.quantity || ''),
+      printType: String(spec.printType || ''),
+      aiConfidence: typeof spec.aiConfidence === 'number' ? spec.aiConfidence : 
+                  (typeof spec.aiConfidence === 'string' ? parseFloat(spec.aiConfidence) : 70)
+    };
+  });
+  
+  // Ensure enquiry fields are proper types
+  if (data.enquiry) {
+    // String conversions for required fields
+    data.enquiry.customerName = String(data.enquiry.customerName || '');
+    data.enquiry.enquiryCode = String(data.enquiry.enquiryCode || '');
+    
+    // String conversions for optional string fields (maintain null if null)
+    data.enquiry.contactPerson = data.enquiry.contactPerson !== null ? 
+                              String(data.enquiry.contactPerson || '') : null;
+    data.enquiry.contactEmail = data.enquiry.contactEmail !== null ? 
+                             String(data.enquiry.contactEmail || '') : null;
+    data.enquiry.specialInstructions = data.enquiry.specialInstructions !== null ? 
+                                    String(data.enquiry.specialInstructions || '') : null;
+    data.enquiry.deliveryRequirements = data.enquiry.deliveryRequirements !== null ? 
+                                     String(data.enquiry.deliveryRequirements || '') : null;
+  }
+  
+  console.log('Sanitized extraction result:', JSON.stringify(data, null, 2));
+  return data;
 }
 
 /**
@@ -396,9 +450,9 @@ export async function extractDocumentData(filePaths: string[]): Promise<Extracti
       const useLabelsSample = filePaths.some(p => p && p.includes('sample_enquiry_labels'));
       
       if (useLabelsSample) {
-        return getSampleLabelExtractionResult();
+        return sanitizeExtractionResult(getSampleLabelExtractionResult());
       } else {
-        return getSampleExtractionResult();
+        return sanitizeExtractionResult(getSampleExtractionResult());
       }
     }
     
@@ -472,9 +526,9 @@ export async function extractDocumentData(filePaths: string[]): Promise<Extracti
     const useLabelsSample = filePaths.some(p => p?.includes('sample_enquiry_labels'));
     
     if (useLabelsSample) {
-      return getSampleLabelExtractionResult();
+      return sanitizeExtractionResult(getSampleLabelExtractionResult());
     } else {
-      return getSampleExtractionResult();
+      return sanitizeExtractionResult(getSampleExtractionResult());
     }
   }
 }
