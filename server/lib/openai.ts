@@ -151,9 +151,13 @@ function extractExcelText(filePath: string): string {
   try {
     console.log(`Reading Excel file: ${filePath}`);
     
+    // Read file as binary buffer
+    const fileBuffer = fs.readFileSync(filePath);
+    console.log(`Read Excel file buffer of size: ${fileBuffer.length} bytes`);
+    
     // Read the Excel file with proper options for binary format
-    const workbook = XLSX.readFile(filePath, {
-      type: 'binary',
+    const workbook = XLSX.read(fileBuffer, {
+      type: 'buffer',  // Read as buffer instead of binary string
       cellDates: true,
       cellNF: false,
       cellText: false
@@ -228,38 +232,49 @@ function extractExcelText(filePath: string): string {
  * @returns Extracted text content
  */
 async function processFile(filePath: string): Promise<string> {
-  // Check if this is a known sample file
-  if (filePath.includes('sample_enquiry_')) {
-    console.log("Reading sample file:", filePath);
-    return fs.readFileSync(filePath, 'utf-8');
-  }
-  
-  // Otherwise handle as regular upload based on file extension
-  const ext = path.extname(filePath).toLowerCase();
-  
-  switch (ext) {
-    case '.pdf':
-      console.log(`Processing PDF file: ${filePath}`);
-      return await extractPdfText(filePath);
-    
-    case '.docx':
-      console.log(`Processing DOCX file: ${filePath}`);
-      return await extractDocxText(filePath);
-    
-    case '.xlsx':
-    case '.xls':
-      console.log(`Processing Excel file: ${filePath}`);
-      return extractExcelText(filePath);
-    
-    case '.txt':
-    case '.csv':
-    case '.json':
-      console.log(`Processing text file: ${filePath}`);
+  try {
+    // Check if this is a known sample file
+    if (filePath.includes('sample_enquiry_')) {
+      console.log("Reading sample file:", filePath);
       return fs.readFileSync(filePath, 'utf-8');
+    }
     
-    default:
-      console.warn(`Unsupported file format: ${ext} for ${filePath}`);
-      return `[Unsupported file format: ${ext}]`;
+    // Check if the file exists
+    if (!fs.existsSync(filePath)) {
+      console.error(`File not found: ${filePath}`);
+      return `[Error: File not found: ${path.basename(filePath)}]`;
+    }
+    
+    // Otherwise handle as regular upload based on file extension
+    const ext = path.extname(filePath).toLowerCase();
+    
+    switch (ext) {
+      case '.pdf':
+        console.log(`Processing PDF file: ${filePath}`);
+        return await extractPdfText(filePath);
+      
+      case '.docx':
+        console.log(`Processing DOCX file: ${filePath}`);
+        return await extractDocxText(filePath);
+      
+      case '.xlsx':
+      case '.xls':
+        console.log(`Processing Excel file: ${filePath}`);
+        return extractExcelText(filePath);
+      
+      case '.txt':
+      case '.csv':
+      case '.json':
+        console.log(`Processing text file: ${filePath}`);
+        return fs.readFileSync(filePath, 'utf-8');
+      
+      default:
+        console.warn(`Unsupported file format: ${ext} for ${filePath}`);
+        return `[Unsupported file format: ${ext}]`;
+    }
+  } catch (error) {
+    console.error(`Error in processFile for ${filePath}:`, error);
+    return `[Error processing file: ${error instanceof Error ? error.message : String(error)}]`;
   }
 }
 
