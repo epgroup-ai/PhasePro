@@ -47,7 +47,7 @@ export default function AuthPage() {
   };
   
   // Call the test endpoint on component mount
-  React.useEffect(() => {
+  useEffect(() => {
     testSession();
   }, []);
   
