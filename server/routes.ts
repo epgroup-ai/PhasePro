@@ -485,8 +485,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Debug log to trace the issue with filtering
       console.log(`GET /api/enquiries - User ID: ${userId}, Is Admin: ${isAdmin}`);
       
-      // If admin, return all enquiries, otherwise only return the user's enquiries
-      const enquiries = await storage.getAllEnquiries(isAdmin ? undefined : userId);
+      // Always filter by user ID to ensure proper data separation between accounts
+      // Even if role is admin, still filter by user ID for data separation
+      const enquiries = await storage.getAllEnquiries(userId);
       
       console.log(`Returning ${enquiries.length} enquiries to user ${userId}`);
       
@@ -869,8 +870,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user?.id;
       const isAdmin = req.user?.role === 'admin';
       
-      // If admin, get all invoices, otherwise only get invoices uploaded by the user
-      const invoices = await storage.getAllInvoices(isAdmin ? undefined : userId);
+      // Always filter by user ID regardless of role to ensure proper data separation
+      const invoices = await storage.getAllInvoices(userId);
       res.json(invoices);
     } catch (err) {
       handleError(err, res);

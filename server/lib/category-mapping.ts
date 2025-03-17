@@ -94,37 +94,50 @@ export function getCategoryManager(productCode: string, description?: string): C
   if (description) {
     const upperDescription = description.toUpperCase();
     
-    // Paper products keywords
+    // Paper products keywords (Alina - E)
     if (upperDescription.includes('PAPER') || upperDescription.includes('KRAFT') || 
-        upperDescription.includes('CARDBOARD') || upperDescription.includes('BAG')) {
+        upperDescription.includes('CARDBOARD') || 
+        (upperDescription.includes('BAG') && !upperDescription.includes('PLASTIC'))) {
+      console.log(`Assigning to Paper Bags (E): ${upperDescription}`);
       return categoryManagers['E'];
     }
     
-    // Plastic products keywords
+    // Plastic products keywords (Carol - D)
     if (upperDescription.includes('PLASTIC') || upperDescription.includes('POLY') || 
-        upperDescription.includes('CARRIER') || upperDescription.includes('VEST')) {
+        upperDescription.includes('CARRIER') || upperDescription.includes('VEST') ||
+        (upperDescription.includes('BAG') && upperDescription.includes('PLASTIC'))) {
+      console.log(`Assigning to Plastic Bags (D): ${upperDescription}`);
       return categoryManagers['D'];
     }
     
-    // Catering keywords
+    // Catering keywords (Sarah & Janice - B)
     if (upperDescription.includes('CATERING') || upperDescription.includes('CUP') || 
         upperDescription.includes('PLATE') || upperDescription.includes('CUTLERY') ||
         upperDescription.includes('STRAW') || upperDescription.includes('FOOD CONTAINER') ||
+        (upperDescription.includes('BOX') && 
+         (upperDescription.includes('FOOD') || upperDescription.includes('PIZZA') || 
+          upperDescription.includes('MEAL') || upperDescription.includes('CAKE'))) ||
         upperDescription.includes('FOIL')) {
+      console.log(`Assigning to Catering (B): ${upperDescription}`);
       return categoryManagers['B'];
     }
     
-    // Retail keywords
+    // Retail keywords (Jon - A)
     if (upperDescription.includes('RETAIL') || upperDescription.includes('POS') || 
         upperDescription.includes('HANGER') || upperDescription.includes('LABEL') ||
-        upperDescription.includes('SIGN') || upperDescription.includes('CHEMICAL')) {
+        upperDescription.includes('STICKER') || upperDescription.includes('SIGN') || 
+        upperDescription.includes('CHEMICAL') || upperDescription.includes('PRINT')) {
+      console.log(`Assigning to Retail & Consumables (A): ${upperDescription}`);
       return categoryManagers['A'];
     }
     
-    // E-commerce keywords
+    // E-commerce keywords (Josie - C)
     if (upperDescription.includes('ECOMMERCE') || upperDescription.includes('E-COMMERCE') || 
         upperDescription.includes('RESALE') || upperDescription.includes('STRETCH') ||
-        upperDescription.includes('PACKAGING') || upperDescription.includes('STATIONERY')) {
+        upperDescription.includes('PACKAGING') || upperDescription.includes('STATIONERY') ||
+        upperDescription.includes('SHIP') || upperDescription.includes('TAPE') || 
+        upperDescription.includes('TRANSIT')) {
+      console.log(`Assigning to E-commerce & Resale Bags (C): ${upperDescription}`);
       return categoryManagers['C'];
     }
   }

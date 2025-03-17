@@ -173,33 +173,57 @@ export function getCategoryManagerForProduct(productType: string, additionalDeta
   
   // Prioritized keyword groups - order matters for overlapping terms
   const keywordGroups = [
-    // Paper Bags (E)
+    // Paper Bags (E - Alina)
     {
-      keywords: ['KRAFT BAG', 'PAPER BAG', 'KRAFT PAPER', 'CARDBOARD BOX', 'PAPER SACK', 'CAKE BOX'],
+      keywords: [
+        'KRAFT BAG', 'PAPER BAG', 'KRAFT PAPER', 'CARDBOARD BOX', 'PAPER SACK', 
+        'PAPER CONTAINER', 'PAPER PACKAGING', 'CARDBOARD PACKAGING', 'PAPER PRODUCT',
+        'CORRUGATED BOX', 'MAILER BOX', 'DISPLAY BOX', 'GIFT BOX', 'SHIPPING BOX',
+        'KRAFT BOX', 'BOX BOARD'
+      ],
       manager: categoryManagerMap['E']
     },
-    // Plastic Bags (D)
+    // Plastic Bags (D - Carol)
     {
-      keywords: ['PLASTIC BAG', 'POLYTHENE', 'POLY BAG', 'CARRIER BAG', 'VEST CARRIER', 'REFUSE SACK'],
+      keywords: [
+        'PLASTIC BAG', 'POLYTHENE', 'POLY BAG', 'CARRIER BAG', 'VEST CARRIER', 'REFUSE SACK',
+        'HDPE BAG', 'LDPE BAG', 'PLASTIC CARRIER', 'POLYPROPYLENE BAG', 'PLASTIC MAILER',
+        'PLASTIC FILM', 'PLASTIC PACKAGING', 'POLY MAILER', 'MAILING BAG', 'BIODEGRADABLE BAG'
+      ],
       manager: categoryManagerMap['D']
     },
-    // Catering (B)
+    // Catering (B - Sarah & Janice)
     {
       keywords: [
         'FOOD CONTAINER', 'CUTLERY', 'CUP', 'PLATE', 'BOWL', 'STRAW', 'CATERING', 'TABLEWARE', 'FOIL CONTAINER',
         'PIZZA BOX', 'TOGO BOX', 'TO GO BOX', 'CAKE BOX', 'BREADSTICK BOX', 'DOLCINI BOX', 'BEVERAGE CARRIER',
-        'CATERING BOX', 'WHOLE CAKE BOX', 'FLATBREAD TOGO', 'PICNIC'
+        'CATERING BOX', 'WHOLE CAKE BOX', 'FLATBREAD TOGO', 'PICNIC', 'TAKEAWAY', 'FOOD PACKAGING',
+        'FOOD TRAY', 'MEAL CONTAINER', 'COFFEE CUP', 'DRINK CUP', 'LID', 'NAPKIN', 'SANDWICH BOX',
+        'SALAD BOX', 'DESSERT BOX', 'FOOD WRAPPER', 'MENU CARD', 'CHOPSTICK', 'WOODEN CUTLERY',
+        'SAUCE POT', 'PORTION POT', 'DELI CONTAINER', 'TAKEOUT CONTAINER', 'CATERING SUPPLIES'
       ],
       manager: categoryManagerMap['B']
     },
-    // E-commerce (C)
+    // E-commerce (C - Josie)
     {
-      keywords: ['PACKAGING', 'SHIPPING', 'E-COMMERCE', 'ECOMMERCE', 'TRANSIT', 'RESALE', 'STATIONERY', 'TAPE'],
+      keywords: [
+        'PACKAGING', 'SHIPPING', 'E-COMMERCE', 'ECOMMERCE', 'TRANSIT', 'RESALE', 'STATIONERY', 'TAPE',
+        'MAILING ENVELOPE', 'SHIPPING SUPPLIES', 'PACKING MATERIALS', 'SHIPPING BOX', 'POSTAL BOX',
+        'BUBBLE WRAP', 'VOID FILL', 'SHIPPING LABEL', 'ADDRESS LABEL', 'POSTAL BAG', 'MAILING TUBE',
+        'DOCUMENT ENVELOPE', 'POSTAL WRAP', 'COURIER BAG', 'PACKAGING TAPE', 'STRAPPING', 'EDGE PROTECTOR',
+        'ONLINE RETAIL', 'FULFILLMENT', 'PROTECTIVE PACKAGING', 'PADDED ENVELOPE', 'JIFFY BAG'
+      ],
       manager: categoryManagerMap['C']
     },
-    // Retail & Consumables (A)
+    // Retail & Consumables (A - Jon)
     {
-      keywords: ['LABEL', 'PRINT', 'STICKER', 'RETAIL', 'EQUIPMENT', 'HANGER', 'FIRSTAID', 'HYGIENE', 'TILL ROLL'],
+      keywords: [
+        'LABEL', 'PRINT', 'STICKER', 'RETAIL', 'EQUIPMENT', 'HANGER', 'FIRSTAID', 'HYGIENE', 'TILL ROLL',
+        'PRICE TAG', 'BRANDING', 'PROMOTIONAL', 'SIGNAGE', 'MARKETING MATERIAL', 'DISPLAY STAND',
+        'POS MATERIAL', 'POINT OF SALE', 'BARCODE LABEL', 'SECURITY TAG', 'SHELF EDGE', 'PRODUCT LABEL',
+        'PRINTED MATERIAL', 'BROCHURE', 'FLYER', 'POSTER', 'BANNER', 'WINDOW GRAPHIC', 'RETAIL SUPPLIES',
+        'SHOP FITTING', 'RETAIL DISPLAY', 'INFORMATION LABEL', 'WARNING LABEL', 'SAFETY LABEL'
+      ],
       manager: categoryManagerMap['A']
     }
   ];

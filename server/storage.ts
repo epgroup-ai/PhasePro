@@ -122,7 +122,7 @@ export class MemStorage implements IStorage {
       console.log('Test user created:', user);
     });
 
-    // Add some initial data for the dashboard
+    // Add some initial data for the dashboard - associated with test user
     this.createEnquiry({
       enquiryCode: 'ENQ-2023-0042',
       customerName: 'ABC Packaging Ltd.',
@@ -134,6 +134,7 @@ export class MemStorage implements IStorage {
       specialInstructions: 'The cardboard boxes must be stackable and have reinforced corners. Customer requests eco-friendly materials where possible.',
       deliveryRequirements: 'Phased delivery required: 2,500 units by July 15, remaining 2,500 by August 1. Delivery to ABC Packaging Ltd. warehouse in Manchester.',
       aiConfidence: 92,
+      createdBy: 1, // Associated with the test user (ID 1)
     });
   }
 
@@ -262,6 +263,12 @@ export class MemStorage implements IStorage {
     if (!insertEnquiry.enquiryCode) {
       insertEnquiry.enquiryCode = `ENQ-${new Date().getFullYear()}-${id.toString().padStart(4, '0')}`;
     }
+    
+    // Ensure createdBy is set if not already present
+    if (insertEnquiry.createdBy === undefined) {
+      console.log("Warning: enquiry being created without createdBy field - this may cause data segregation issues");
+    }
+    
     const enquiry: Enquiry = { ...insertEnquiry, id };
     this.enquiries.set(id, enquiry);
     return enquiry;
@@ -278,9 +285,13 @@ export class MemStorage implements IStorage {
   }
 
   async getAllEnquiries(userId?: number): Promise<Enquiry[]> {
-    if (userId === undefined) {
-      return Array.from(this.enquiries.values());
+    if (!userId) {
+      // If no user ID is provided, return empty array for safety
+      console.log("No user ID provided to getAllEnquiries, returning empty array");
+      return [];
     }
+    // Always filter by user ID to ensure data separation
+    console.log(`Getting enquiries for user ID: ${userId}`);
     return Array.from(this.enquiries.values()).filter(enquiry => 
       enquiry.createdBy === userId
     );
@@ -475,12 +486,15 @@ export class MemStorage implements IStorage {
   async getAllInvoices(userId?: number): Promise<Invoice[]> {
     const allInvoices = Array.from(this.invoices.values());
     
-    // If userId is provided, filter by uploadedBy
-    if (userId !== undefined) {
-      return allInvoices.filter(invoice => invoice.uploadedBy === userId);
+    // Always filter by user ID to ensure data separation
+    if (!userId) {
+      // If no user ID is provided, return empty array for safety
+      console.log("No user ID provided to getAllInvoices, returning empty array");
+      return [];
     }
     
-    return allInvoices;
+    console.log(`Getting invoices for user ID: ${userId}`);
+    return allInvoices.filter(invoice => invoice.uploadedBy === userId);
   }
 
   async getInvoicesByAssignee(assigneeId: string): Promise<Invoice[]> {
@@ -820,12 +834,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllEnquiries(userId?: number): Promise<Enquiry[]> {
-    if (userId === undefined) {
-      // Admin access - return all enquiries
-      const result = await this.db.select().from(enquiries);
-      return result;
+    if (!userId) {
+      // If no user ID is provided, return empty array for safety
+      console.log("No user ID provided to getAllEnquiries, returning empty array");
+      return [];
     }
-    // User access - return only their enquiries
+    // Always filter by user ID to ensure data separation
+    console.log(`Getting enquiries for user ID: ${userId}`);
     const result = await this.db.select().from(enquiries).where(eq(enquiries.createdBy, userId));
     return result;
   }
@@ -943,15 +958,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllInvoices(userId?: number): Promise<Invoice[]> {
-    if (userId !== undefined) {
-      // User-specific invoices
-      const result = await this.db.select().from(invoices).where(eq(invoices.uploadedBy, userId));
-      return result;
-    } else {
-      // All invoices (admin)
-      const result = await this.db.select().from(invoices);
-      return result;
+    if (!userId) {
+      // If no user ID is provided, return empty array for safety
+      console.log("No user ID provided to getAllInvoices, returning empty array");
+      return [];
     }
+    
+    // Always filter by user ID to ensure data separation
+    console.log(`Getting invoices for user ID: ${userId}`);
+    const result = await this.db.select().from(invoices).where(eq(invoices.uploadedBy, userId));
+    return result;
   }
 
   async getInvoicesByAssignee(assigneeId: string): Promise<Invoice[]> {
