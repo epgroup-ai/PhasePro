@@ -14,9 +14,10 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Printer, Download, EyeIcon, BarChart3, FileIcon, ArrowLeftRight, Users } from "lucide-react";
+import { FileText, Printer, Download, EyeIcon, BarChart3, FileIcon, ArrowLeftRight, Users, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { useLocation } from "wouter";
 import wsClient, { CursorPosition, ActiveUser } from "@/lib/websocket-client";
 
 interface SpecSheetViewerProps {
@@ -29,6 +30,7 @@ export default function SpecSheetViewer({ specSheets, enquiryId }: SpecSheetView
   
   const { user } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const specSheetRef = useRef<HTMLDivElement>(null);
 
   // WebSocket states
@@ -352,6 +354,14 @@ export default function SpecSheetViewer({ specSheets, enquiryId }: SpecSheetView
                 title={compareSheets.length > 0 ? "Compare with selected sheet" : "Select for comparison"}
               >
                 <ArrowLeftRight className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setLocation(`/spec-sheet/${sheet.id}`)}
+                title="View Full Details"
+              >
+                <ExternalLink className="h-4 w-4" />
               </Button>
             </div>
           </div>
