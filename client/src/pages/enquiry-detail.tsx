@@ -48,7 +48,7 @@ export default function EnquiryDetail() {
       });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       // Refetch the enquiry data to get the new spec sheet
       queryClient.invalidateQueries({ queryKey: ['/api/enquiries', parseInt(id)] });
       
@@ -56,6 +56,12 @@ export default function EnquiryDetail() {
         title: "Spec sheet generated",
         description: "The specification sheet has been created successfully.",
       });
+      
+      // Navigate to the newly created spec sheet page
+      if (data && data.specSheet && data.specSheet.id) {
+        // Redirect to a page that shows categorization details
+        setLocation(`/spec-sheet/${data.specSheet.id}`);
+      }
     },
     onError: (error) => {
       toast({
